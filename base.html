@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {% block title %}
+            An Intelligent Student Attendance System
+        {% endblock %}
+    </title>
+
+    <style>
+
+        /* =========================================================
+           RED / BLACK / WHITE THEME
+        ========================================================= */
+
+        :root {
+            --red: #dc2626;
+            --dark-red: #b91c1c;
+            --light-red: #fee2e2;
+            --very-light-red: #fff5f5;
+
+            --black: #111111;
+            --dark-black: #000000;
+
+            --white: #ffffff;
+            --off-white: #fafafa;
+
+            --gray: #666666;
+            --light-gray: #e5e5e5;
+            --medium-gray: #cccccc;
+
+            --green: #15803d;
+            --green-light: #dcfce7;
+
+            --orange: #c2410c;
+            --orange-light: #ffedd5;
+        }
+
+
+        /* =========================================================
+           GLOBAL RESET
+        ========================================================= */
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background: var(--white);
+
+            color: var(--black);
+
+            line-height: 1.6;
+        }
+
+        a {
+            color: var(--red);
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: var(--dark-red);
+            text-decoration: none;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+
+        /* =========================================================
+           NAVIGATION BAR
+        ========================================================= */
+
+        .navbar {
+            background: var(--white);
+
+            color: var(--black);
+
+            padding: 14px 28px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 20px;
+
+            flex-wrap: wrap;
+
+            border-bottom:
+                2px solid var(--red);
+
+            box-shadow:
+                0 2px 10px
+                rgba(0, 0, 0, 0.08);
+        }
+
+
+        /* =========================================================
+           BRAND
+        ========================================================= */
+
+        .brand {
+            display: flex;
+
+            align-items: center;
+
+            gap: 11px;
+
+            color: var(--black);
+
+            font-size: 19px;
+
+            font-weight: 700;
+
+            white-space: nowrap;
+        }
+
+        .brand:hover {
+            color: var(--black);
+        }
+
+
+        .brand-logo {
+            display: inline-flex;
+
+            width: 39px;
+
+            height: 39px;
+
+            align-items: center;
+
+            justify-content: center;
+
+            border-radius: 8px;
+
+            background: var(--red);
+
+            color: var(--white);
+
+            font-size: 21px;
+
+            font-weight: 700;
+        }
+
+
+        /* =========================================================
+           NAVIGATION LINKS
+        ========================================================= */
+
+        .nav-links {
+            display: flex;
+
+            align-items: center;
+
+            gap: 5px;
+
+            flex-wrap: wrap;
+        }
+
+
+        .nav-links a {
+            color: var(--black);
+
+            padding: 9px 12px;
+
+            border-radius: 6px;
+
+            font-size: 14px;
+
+            font-weight: 600;
+
+            transition:
+                background 0.2s ease,
+                color 0.2s ease;
+        }
+
+
+        .nav-links a:hover {
+            background: var(--light-red);
+
+            color: var(--dark-red);
+        }
+
+
+        /* =========================================================
+           ACTIVE NAVIGATION
+           ========================================================= */
+
+        .nav-links a.active {
+            background: var(--red);
+
+            color: var(--white);
+        }
+
+        .nav-links a.active:hover {
+            background: var(--dark-red);
+
+            color: var(--white);
+        }
+
+
+        /* =========================================================
+           LOGOUT
+        ========================================================= */
+
+        .nav-links .nav-logout {
+            background: var(--red);
+
+            color: var(--white);
+
+            margin-left: 5px;
+        }
+
+
+        .nav-links .nav-logout:hover {
+            background: var(--dark-red);
+
+            color: var(--white);
+        }
+
+
+        /* =========================================================
+           MAIN CONTENT
+        ========================================================= */
+
+        .container {
+            width: 100%;
+
+            max-width: 1250px;
+
+            margin: 0 auto;
+
+            padding: 28px 22px;
+
+            min-height:
+                calc(100vh - 150px);
+        }
+
+
+        /* =========================================================
+           PAGE HEADER
+        ========================================================= */
+
+        .page-header {
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            gap: 16px;
+
+            flex-wrap: wrap;
+
+            margin-bottom: 24px;
+        }
+
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            color: var(--black);
+
+            line-height: 1.3;
+        }
+
+
+        h1 {
+            font-size: 29px;
+
+            margin:
+                0 0 8px;
+        }
+
+
+        h2 {
+            font-size: 21px;
+
+            margin:
+                0 0 16px;
+        }
+
+
+        h3 {
+            font-size: 17px;
+
+            margin:
+                0 0 10px;
+        }
+
+
+        h4 {
+            font-size: 15px;
+        }
+
+
+        p {
+            margin-top: 0;
+        }
+
+
+        .muted {
+            color: var(--gray);
+        }
+
+
+        /* =========================================================
+           CARDS AND GRID
+        ========================================================= */
+
+        .grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    4,
+                    minmax(0, 1fr)
+                );
+
+            gap: 18px;
+
+            margin-bottom: 22px;
+        }
+
+
+        .card {
+            position: relative;
+
+            overflow: hidden;
+
+            background: var(--white);
+
+            border:
+                1px solid var(--light-gray);
+
+            border-radius: 10px;
+
+            padding: 22px;
+
+            margin-bottom: 20px;
+
+            box-shadow:
+                0 3px 12px
+                rgba(0, 0, 0, 0.06);
+        }
+
+
+        .card::before {
+            content: "";
+
+            position: absolute;
+
+            width: 130px;
+
+            height: 130px;
+
+            top: -65px;
+
+            right: -65px;
+
+            pointer-events: none;
+
+            opacity: 0.10;
+
+            background:
+                repeating-radial-gradient(
+                    circle at center,
+                    transparent 0,
+                    transparent 15px,
+                    var(--red) 16px,
+                    transparent 17px
+                ),
+                repeating-conic-gradient(
+                    from 0deg,
+                    transparent 0deg,
+                    transparent 13deg,
+                    var(--red) 14deg,
+                    transparent 15deg
+                );
+        }
+
+
+        .card::after {
+            content: "";
+
+            position: absolute;
+
+            width: 110px;
+
+            height: 110px;
+
+            bottom: -55px;
+
+            left: -55px;
+
+            pointer-events: none;
+
+            opacity: 0.08;
+
+            background:
+                repeating-radial-gradient(
+                    circle at center,
+                    transparent 0,
+                    transparent 14px,
+                    var(--red) 15px,
+                    transparent 16px
+                ),
+                repeating-conic-gradient(
+                    from 0deg,
+                    transparent 0deg,
+                    transparent 13deg,
+                    var(--red) 14deg,
+                    transparent 15deg
+                );
+        }
+
+
+        .card:last-child {
+            margin-bottom: 20px;
+        }
+
+
+        .stat-number {
+            font-size: 32px;
+
+            font-weight: 700;
+
+            color: var(--red);
+
+            line-height: 1.4;
+
+            margin:
+                9px 0;
+
+            overflow-wrap:
+                anywhere;
+        }
+
+
+        /* =========================================================
+           BUTTONS
+        ========================================================= */
+
+        .btn,
+        button {
+            display: inline-flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            gap: 7px;
+
+            padding:
+                10px 16px;
+
+            border:
+                1px solid var(--red);
+
+            border-radius: 7px;
+
+            background: var(--red);
+
+            color: var(--white);
+
+            font-size: 14px;
+
+            font-weight: 600;
+
+            line-height: 1.4;
+
+            text-align: center;
+
+            cursor: pointer;
+
+            transition:
+                background 0.2s ease,
+                border-color 0.2s ease,
+                transform 0.15s ease;
+        }
+
+
+        .btn:hover,
+        button:hover {
+            background: var(--dark-red);
+
+            border-color: var(--dark-red);
+
+            color: var(--white);
+
+            transform:
+                translateY(-1px);
+        }
+
+
+        .btn-secondary {
+            background: var(--white);
+
+            color: var(--black);
+
+            border-color: var(--black);
+        }
+
+
+        .btn-secondary:hover {
+            background: var(--black);
+
+            border-color: var(--black);
+
+            color: var(--white);
+        }
+
+
+        .btn-danger {
+            background: var(--red);
+
+            border-color: var(--red);
+
+            color: var(--white);
+        }
+
+
+        .btn-danger:hover {
+            background: var(--dark-red);
+
+            border-color: var(--dark-red);
+
+            color: var(--white);
+        }
+
+
+        .btn-success {
+            background: var(--green);
+
+            border-color: var(--green);
+
+            color: var(--white);
+        }
+
+
+        .btn-success:hover {
+            background: #166534;
+
+            border-color: #166534;
+
+            color: var(--white);
+        }
+
+
+        .btn-small {
+            padding:
+                6px 10px;
+
+            font-size: 12px;
+        }
+
+
+        button:disabled {
+            opacity: 0.6;
+
+            cursor: not-allowed;
+
+            transform: none;
+        }
+
+
+        /* =========================================================
+           FORMS
+        ========================================================= */
+
+        .form-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    3,
+                    minmax(0, 1fr)
+                );
+
+            gap: 16px;
+        }
+
+
+        .field {
+            margin-bottom: 14px;
+
+            min-width: 0;
+        }
+
+
+        label {
+            display: block;
+
+            color: var(--black);
+
+            font-size: 14px;
+
+            font-weight: 600;
+
+            margin-bottom: 6px;
+        }
+
+
+        input,
+        select,
+        textarea {
+            display: block;
+
+            width: 100%;
+
+            min-width: 0;
+
+            padding:
+                10px 12px;
+
+            border:
+                1px solid var(--medium-gray);
+
+            border-radius: 7px;
+
+            background: var(--white);
+
+            color: var(--black);
+
+            outline: none;
+
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+
+        input::placeholder,
+        textarea::placeholder {
+            color: #888888;
+        }
+
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--red);
+
+            box-shadow:
+                0 0 0 3px
+                rgba(220, 38, 38, 0.12);
+        }
+
+
+        input[type="checkbox"],
+        input[type="radio"] {
+            display: inline-block;
+
+            width: auto;
+
+            accent-color: var(--red);
+        }
+
+
+        input[type="checkbox"] + label,
+        input[type="radio"] + label {
+            display: inline;
+        }
+
+
+        textarea {
+            min-height: 100px;
+
+            resize: vertical;
+        }
+
+
+        .form-actions {
+            display: flex;
+
+            gap: 10px;
+
+            flex-wrap: wrap;
+
+            align-items: center;
+
+            margin-top: 12px;
+        }
+
+
+        /* =========================================================
+           TABLES
+        ========================================================= */
+
+        .table-wrap {
+            width: 100%;
+
+            overflow-x: auto;
+
+            border-radius: 8px;
+        }
+
+
+        table {
+            width: 100%;
+
+            border-collapse: collapse;
+
+            background: var(--white);
+        }
+
+
+        th,
+        td {
+            padding:
+                12px 14px;
+
+            text-align: left;
+
+            border-bottom:
+                1px solid var(--light-gray);
+
+            vertical-align: middle;
+        }
+
+
+        th {
+            background: var(--black);
+
+            color: var(--white);
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            text-transform: uppercase;
+
+            letter-spacing: 0.035em;
+
+            white-space: nowrap;
+        }
+
+
+        td {
+            font-size: 14px;
+
+            color: var(--black);
+        }
+
+
+        tbody tr {
+            transition:
+                background 0.15s ease;
+        }
+
+
+        tbody tr:hover {
+            background: var(--very-light-red);
+        }
+
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+
+        .actions {
+            display: flex;
+
+            align-items: center;
+
+            gap: 7px;
+
+            flex-wrap: wrap;
+        }
+
+
+        /* =========================================================
+           STATUS LABELS
+        ========================================================= */
+
+        .badge {
+            display: inline-block;
+
+            padding:
+                4px 9px;
+
+            border-radius: 20px;
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            white-space: nowrap;
+        }
+
+
+        .badge-success {
+            background: var(--green-light);
+
+            color: #166534;
+        }
+
+
+        .badge-danger {
+            background: var(--light-red);
+
+            color: #991b1b;
+        }
+
+
+        .badge-warning {
+            background: var(--orange-light);
+
+            color: #9a3412;
+        }
+
+
+        .badge-info {
+            background: var(--black);
+
+            color: var(--white);
+        }
+
+
+        /* =========================================================
+           FLASH MESSAGES
+        ========================================================= */
+
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+
+
+        .flash {
+            padding:
+                12px 15px;
+
+            margin-bottom: 10px;
+
+            border:
+                1px solid var(--medium-gray);
+
+            border-left:
+                4px solid var(--black);
+
+            border-radius: 7px;
+
+            background: #f5f5f5;
+
+            color: var(--black);
+        }
+
+
+        .flash.success {
+            border-color: #bbf7d0;
+
+            border-left-color:
+                var(--green);
+
+            background: var(--green-light);
+
+            color: #166534;
+        }
+
+
+        .flash.error,
+        .flash.danger {
+            border-color: #fecaca;
+
+            border-left-color:
+                var(--red);
+
+            background: var(--light-red);
+
+            color: #991b1b;
+        }
+
+
+        .flash.warning {
+            border-color: #fed7aa;
+
+            border-left-color:
+                var(--orange);
+
+            background: var(--orange-light);
+
+            color: #9a3412;
+        }
+
+
+        /* =========================================================
+           EMPTY STATES
+        ========================================================= */
+
+        .empty-state {
+            padding:
+                28px 15px;
+
+            color: var(--gray);
+
+            text-align: center;
+
+            border:
+                1px dashed var(--medium-gray);
+
+            border-radius: 8px;
+
+            background: var(--off-white);
+        }
+
+
+        /* =========================================================
+           SECTION TITLE
+        ========================================================= */
+
+        .section-title {
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 12px;
+
+            flex-wrap: wrap;
+
+            margin-bottom: 16px;
+        }
+
+
+        .section-title h2 {
+            margin-bottom: 0;
+        }
+
+
+        .text-right {
+            text-align: right;
+        }
+
+
+        .text-center {
+            text-align: center;
+        }
+
+
+        .mt-1 {
+            margin-top: 8px;
+        }
+
+
+        .mt-2 {
+            margin-top: 16px;
+        }
+
+
+        .mb-1 {
+            margin-bottom: 8px;
+        }
+
+
+        .mb-2 {
+            margin-bottom: 16px;
+        }
+
+
+        /* =========================================================
+           FOOTER
+        ========================================================= */
+
+        .footer {
+            padding: 20px;
+
+            background: var(--white);
+
+            border-top:
+                2px solid var(--red);
+
+            color: var(--gray);
+
+            text-align: center;
+
+            font-size: 13px;
+        }
+
+
+        .footer p {
+            margin: 0;
+        }
+
+
+        /* =========================================================
+           RESPONSIVE LAYOUT
+        ========================================================= */
+
+        @media (max-width: 1000px) {
+
+            .grid {
+                grid-template-columns:
+                    repeat(
+                        2,
+                        minmax(0, 1fr)
+                    );
+            }
+
+
+            .form-grid {
+                grid-template-columns:
+                    repeat(
+                        2,
+                        minmax(0, 1fr)
+                    );
+            }
+        }
+
+
+        @media (max-width: 650px) {
+
+            .navbar {
+                padding:
+                    14px 16px;
+
+                align-items:
+                    flex-start;
+
+                flex-direction:
+                    column;
+
+                gap: 12px;
+            }
+
+
+            .brand {
+                font-size: 17px;
+            }
+
+
+            .nav-links {
+                width: 100%;
+
+                gap: 4px;
+            }
+
+
+            .nav-links a {
+                padding:
+                    8px 9px;
+
+                font-size: 13px;
+            }
+
+
+            .nav-links .nav-logout {
+                margin-left: 0;
+            }
+
+
+            .container {
+                padding:
+                    20px 13px;
+            }
+
+
+            .page-header {
+                align-items:
+                    flex-start;
+
+                flex-direction:
+                    column;
+            }
+
+
+            h1 {
+                font-size: 24px;
+            }
+
+
+            .grid,
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+
+            .card {
+                padding: 16px;
+            }
+
+
+            .stat-number {
+                font-size: 28px;
+            }
+
+
+            .btn,
+            button {
+                max-width: 100%;
+            }
+        }
+
+    </style>
+
+    {% block head %}{% endblock %}
+
+</head>
+
+
+<body>
+
+    <!-- =========================================================
+         TOP NAVIGATION
+    ========================================================= -->
+
+    <header class="navbar">
+
+        <a
+            class="brand"
+            href="{{ url_for('home') }}"
+        >
+
+            <span
+                class="brand-logo"
+                aria-hidden="true"
+            >
+                A
+            </span>
+
+            <span>
+                Intelligent Attendance
+            </span>
+
+        </a>
+
+
+        <nav
+            class="nav-links"
+            aria-label="Main navigation"
+        >
+
+            {% if session.get('role') == 'admin' %}
+
+                <a
+                    href="{{ url_for('dashboard') }}"
+                >
+                    Dashboard
+                </a>
+
+
+                <a
+                    href="{{ url_for('admin_students') }}"
+                >
+                    Students
+                </a>
+
+
+                <a
+                    href="{{ url_for('admin_faculty') }}"
+                >
+                    Faculty
+                </a>
+
+
+                <a
+                    href="{{ url_for('admin_timetable') }}"
+                >
+                    Timetable
+                </a>
+
+
+                <a
+                    href="{{ url_for('admin_attendance_history') }}"
+                >
+                    Attendance Records
+                </a>
+
+
+                <a
+                    href="{{ url_for('start_attendance_page') }}"
+                >
+                    Start Attendance
+                </a>
+
+
+            {% elif session.get('role') == 'faculty' %}
+
+                <a
+                    href="{{ url_for('faculty_dashboard') }}"
+                >
+                    Dashboard
+                </a>
+
+
+            {% elif session.get('role') == 'student' %}
+
+                <a
+                    href="{{ url_for('student_dashboard') }}"
+                >
+                    Dashboard
+                </a>
+
+            {% endif %}
+
+
+            {% if session.get('role') %}
+
+                <a
+                    class="nav-logout"
+                    href="{{ url_for('logout') }}"
+                >
+                    Logout
+                </a>
+
+            {% endif %}
+
+        </nav>
+
+    </header>
+
+
+    <!-- =========================================================
+         MAIN PAGE CONTENT
+    ========================================================= -->
+
+    <main class="container">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+
+            {% if messages %}
+
+                <div
+                    class="flash-messages"
+                    role="status"
+                >
+
+                    {% for category, message in messages %}
+
+                        <div class="flash {{ category }}">
+                            {{ message }}
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+        {% endwith %}
+
+
+        {% block content %}{% endblock %}
+
+    </main>
+
+
+    <!-- =========================================================
+         FOOTER
+    ========================================================= -->
+
+    <footer class="footer">
+
+        <p>
+            Intelligent Student Attendance Management System
+        </p>
+
+    </footer>
+
+
+    {% block scripts %}{% endblock %}
+
+</body>
+</html>

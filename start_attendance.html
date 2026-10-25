@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Start Attendance</title>
+
+<style>
+:root{
+  color-scheme:light;
+  --red:#c91d2e;
+  --black:#101116;
+  --white:#fff;
+  --muted:#687080;
+  --line:#e5e7eb
+}
+
+*{
+  box-sizing:border-box
+}
+
+body{
+  font-family:Arial,sans-serif;
+  background:#f4f5f7;
+  color:var(--black);
+  margin:0;
+  padding:24px;
+  min-height:100vh
+}
+
+main{
+  max-width:1100px;
+  margin:0 auto;
+  padding:26px;
+  background:var(--white);
+  border:1px solid var(--line);
+  border-top:5px solid var(--red);
+  border-radius:16px;
+  box-shadow:0 12px 36px #1118270d
+}
+
+h1{
+  margin:0 0 8px
+}
+
+.muted{
+  color:var(--muted);
+  line-height:1.55
+}
+
+.topline{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap
+}
+
+nav{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap
+}
+
+button,
+a{
+  border:0;
+  border-radius:8px;
+  padding:11px 16px;
+  font-weight:700;
+  font-size:14px;
+  text-decoration:none;
+  cursor:pointer
+}
+
+button{
+  background:var(--red);
+  color:white
+}
+
+button.secondary,
+a{
+  background:#eceef2;
+  color:#20222a
+}
+
+button:disabled{
+  opacity:.5;
+  cursor:not-allowed
+}
+
+.camera-wrap{
+  background:#0e1015;
+  border-radius:12px;
+  overflow:hidden;
+  max-width:760px;
+  margin:20px auto 12px;
+  aspect-ratio:4/3;
+  display:grid;
+  place-items:center
+}
+
+video{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transform:scaleX(-1)
+}
+
+.actions{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin:16px 0
+}
+
+#status{
+  padding:14px;
+  border-radius:9px;
+  background:#f1f3f6;
+  text-align:center;
+  min-height:48px;
+  line-height:1.5;
+  border-left:4px solid var(--red)
+}
+
+#student{
+  text-align:center;
+  line-height:1.8;
+  margin:12px 0;
+  font-weight:700
+}
+
+.meta{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin:12px 0
+}
+
+.pill{
+  padding:7px 10px;
+  border-radius:999px;
+  background:#f1f2f5;
+  font-size:13px;
+  color:#333
+}
+
+.section{
+  margin-top:24px
+}
+
+.table-wrap{
+  overflow-x:auto;
+  border:1px solid var(--line);
+  border-radius:10px
+}
+
+table{
+  border-collapse:collapse;
+  width:100%;
+  font-size:14px
+}
+
+th,
+td{
+  text-align:left;
+  padding:11px 12px;
+  border-bottom:1px solid var(--line);
+  white-space:nowrap
+}
+
+th{
+  background:#17181d;
+  color:white
+}
+
+tr:last-child td{
+  border-bottom:0
+}
+
+.absent{
+  color:#b42332;
+  font-weight:700
+}
+
+.present{
+  color:#187344;
+  font-weight:700
+}
+
+.warning{
+  font-size:13px;
+  color:var(--muted);
+  margin-top:18px
+}
+
+@media(max-width:600px){
+  body{
+    padding:10px
+  }
+
+  main{
+    padding:16px
+  }
+}
+</style>
+</head>
+
+<body>
+
+<main>
+
+  <div class="topline">
+
+    <div>
+
+      <h1>Scheduled Attendance</h1>
+
+      <p class="muted">
+        Attendance remains active for the entire scheduled class duration,
+        from the listed start time until the listed end time.
+      </p>
+
+    </div>
+
+    <nav>
+
+      <a href="{{ url_for('home') }}">
+        Back to Home
+      </a>
+
+      <a href="{{ url_for('admin_attendance_history') }}">
+        Date-Wise Attendance
+      </a>
+
+    </nav>
+
+  </div>
+
+
+  <!-- =========================================================
+       CAMERA
+       ========================================================= -->
+
+  <div class="camera-wrap">
+
+    <video
+      id="camera"
+      autoplay
+      playsinline
+      muted>
+    </video>
+
+  </div>
+
+
+  <!-- =========================================================
+       ACTION BUTTONS
+       ========================================================= -->
+
+  <div class="actions">
+
+    <button id="startBtn">
+      Enable Camera &amp; Monitor Schedule
+    </button>
+
+    <button
+      id="stopBtn"
+      class="secondary"
+      disabled>
+
+      Stop Monitoring
+
+    </button>
+
+  </div>
+
+
+  <!-- =========================================================
+       STATUS
+       ========================================================= -->
+
+  <div
+    id="status"
+    role="status"
+    aria-live="polite">
+
+    Press “Enable Camera &amp; Monitor Schedule” once.
+    Keep this page open for automatic class-end finalization.
+
+  </div>
+
+
+  <!-- =========================================================
+       RECOGNIZED STUDENT
+       ========================================================= -->
+
+  <div id="student"></div>
+
+
+  <!-- =========================================================
+       CLASS META
+       ========================================================= -->
+
+  <div class="meta">
+
+    <span
+      class="pill"
+      id="classPill">
+
+      No active class
+
+    </span>
+
+
+    <span
+      class="pill"
+      id="windowPill">
+
+      Attendance: waiting for class
+
+    </span>
+
+  </div>
+
+
+  <!-- =========================================================
+       FINALIZED ATTENDANCE
+       ========================================================= -->
+
+  <section
+    class="section"
+    id="finalSection"
+    hidden>
+
+    <h2 id="finalHeading">
+      Finalized attendance
+    </h2>
+
+    <p
+      id="finalMeta"
+      class="muted">
+    </p>
+
+
+    <div class="table-wrap">
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>S.No.</th>
+
+            <th>
+              Roll Number
+            </th>
+
+            <th>
+              Student Name
+            </th>
+
+            <th>
+              Status
+            </th>
+
+            <th>
+              Time
+            </th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody id="finalRows">
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </section>
+
+
+  <p class="warning">
+
+    Attendance is available throughout the complete scheduled class.
+    The camera is initialized only after your click.
+    Attendance frames are processed while the scheduled class is active.
+    When the class ends, attendance is finalized automatically and the
+    next scheduled class can begin immediately.
+
+  </p>
+
+</main>
+
+
+<script>
+
+/* ============================================================
+   DOM ELEMENTS
+   ============================================================ */
+
+const video =
+  document.getElementById('camera');
+
+const startBtn =
+  document.getElementById('startBtn');
+
+const stopBtn =
+  document.getElementById('stopBtn');
+
+const statusBox =
+  document.getElementById('status');
+
+const studentBox =
+  document.getElementById('student');
+
+const classPill =
+  document.getElementById('classPill');
+
+const windowPill =
+  document.getElementById('windowPill');
+
+const finalSection =
+  document.getElementById('finalSection');
+
+const finalHeading =
+  document.getElementById('finalHeading');
+
+const finalMeta =
+  document.getElementById('finalMeta');
+
+const finalRows =
+  document.getElementById('finalRows');
+
+
+/* ============================================================
+   STATE
+   ============================================================ */
+
+let stream = null;
+
+let frameTimer = null;
+
+let scheduleTimer = null;
+
+let busy = false;
+
+let monitoring = false;
+
+let currentClass = null;
+
+let lastFinalizedKey = null;
+
+
+/*
+ * IMPORTANT
+ *
+ * There is NO 25-minute timer here.
+ *
+ * The backend schedule endpoint decides whether the
+ * current class is active.
+ *
+ * Attendance continues until the backend reports that
+ * the scheduled class has ended.
+ */
+
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+function showStatus(message){
+
+  statusBox.textContent =
+    message || 'Ready.';
+
+}
+
+
+/* ============================================================
+   DATE FORMAT
+   ============================================================ */
+
+function formatDate(iso){
+
+  if(
+    !iso ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(iso)
+  ){
+
+    return iso || '';
+
+  }
+
+
+  const [
+    y,
+    m,
+    d
+  ] = iso.split('-');
+
+
+  return `${d}/${m}/${y}`;
+
+}
+
+
+/* ============================================================
+   POST JSON
+   ============================================================ */
+
+async function postJSON(
+  url,
+  data={}
+){
+
+  const response =
+    await fetch(
+      url,
+      {
+        method:'POST',
+
+        headers:{
+          'Content-Type':
+            'application/json'
+        },
+
+        body:
+          JSON.stringify(data),
+
+        cache:
+          'no-store'
+      }
+    );
+
+
+  const result =
+    await response.json();
+
+
+  if(
+    !response.ok ||
+    result.success === false
+  ){
+
+    throw new Error(
+      result.message ||
+      'Request failed.'
+    );
+
+  }
+
+
+  return result;
+
+}
+
+
+/* ============================================================
+   GET JSON
+   ============================================================ */
+
+async function getJSON(url){
+
+  const response =
+    await fetch(
+      url,
+      {
+        cache:'no-store'
+      }
+    );
+
+
+  const result =
+    await response.json();
+
+
+  if(
+    !response.ok ||
+    result.success === false
+  ){
+
+    throw new Error(
+      result.message ||
+      'Request failed.'
+    );
+
+  }
+
+
+  return result;
+
+}
+
+
+/* ============================================================
+   STOP MONITORING
+   ============================================================ */
+
+function stopMonitoring(
+  message='Monitoring stopped.'
+){
+
+  monitoring = false;
+
+
+  /*
+   * Stop frame processing.
+   */
+
+  if(frameTimer){
+
+    clearInterval(
+      frameTimer
+    );
+
+    frameTimer = null;
+
+  }
+
+
+  /*
+   * Stop schedule polling.
+   */
+
+  if(scheduleTimer){
+
+    clearInterval(
+      scheduleTimer
+    );
+
+    scheduleTimer = null;
+
+  }
+
+
+  /*
+   * Stop camera.
+   */
+
+  if(stream){
+
+    stream
+      .getTracks()
+      .forEach(
+        track =>
+          track.stop()
+      );
+
+    stream = null;
+
+  }
+
+
+  video.srcObject = null;
+
+
+  /*
+   * Reset buttons.
+   */
+
+  startBtn.disabled = false;
+
+  stopBtn.disabled = true;
+
+
+  /*
+   * Reset current class.
+   */
+
+  currentClass = null;
+
+
+  classPill.textContent =
+    'No active class';
+
+
+  windowPill.textContent =
+    'Attendance: waiting for class';
+
+
+  if(message){
+
+    showStatus(
+      message
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   RENDER FINAL ATTENDANCE
+   ============================================================ */
+
+function renderFinalTable(
+  result
+){
+
+  const rows =
+    result.records || [];
+
+
+  finalRows.replaceChildren();
+
+
+  rows.forEach(
+    (row,index)=>{
+
+      const tr =
+        document.createElement(
+          'tr'
+        );
+
+
+      const values = [
+
+        index + 1,
+
+        row.student_code ||
+          row.roll_number ||
+          '-',
+
+        row.student_name ||
+          '-',
+
+        row.status ||
+          'Absent',
+
+        row.time ||
+          '-'
+
+      ];
+
+
+      values.forEach(
+        (value,i)=>{
+
+          const td =
+            document.createElement(
+              'td'
+            );
+
+
+          td.textContent =
+            value;
+
+
+          if(i === 3){
+
+            const normalized =
+              String(
+                value
+              )
+              .toLowerCase()
+              .trim();
+
+
+            if(
+              normalized ===
+              'absent'
+            ){
+
+              td.className =
+                'absent';
+
+            }
+            else{
+
+              td.className =
+                'present';
+
+            }
+
+          }
+
+
+          tr.appendChild(td);
+
+        }
+      );
+
+
+      finalRows.appendChild(
+        tr
+      );
+
+    }
+  );
+
+
+  finalSection.hidden =
+    false;
+
+
+  finalHeading.textContent =
+    'Finalized attendance — absent students first';
+
+
+  finalMeta.textContent =
+    `${formatDate(result.date)} · ` +
+    `Finalized at ${result.finalized_at || ''} · ` +
+    `${result.absent_added || 0} absent record(s) added.`;
+
+}
+
+
+/* ============================================================
+   FINALIZE PREVIOUS CLASS
+   ============================================================ */
+
+async function finalizePreviousClass(
+  classInfo
+){
+
+  if(!classInfo){
+
+    return;
+
+  }
+
+
+  const classDate =
+    classInfo.date ||
+    new Date()
+      .toISOString()
+      .slice(0,10);
+
+
+  const key =
+    `${classDate}:${classInfo.timetable_id}`;
+
+
+  /*
+   * Prevent duplicate finalization.
+   */
+
+  if(
+    lastFinalizedKey === key
+  ){
+
+    return;
+
+  }
+
+
+  try{
+
+    const result =
+      await postJSON(
+        '/api/attendance/camera/finalize',
+        {
+
+          timetable_id:
+            classInfo.timetable_id,
+
+          date:
+            classDate
+
+        }
+      );
+
+
+    lastFinalizedKey =
+      key;
+
+
+    renderFinalTable(
+      result
+    );
+
+
+    showStatus(
+      `Attendance finalized for ${
+        classInfo.subject ||
+        classInfo.class_name ||
+        'the class'
+      }.`
+    );
+
+
+  }
+  catch(error){
+
+    /*
+     * Do not permanently mark it finalized
+     * if the backend rejected the request.
+     *
+     * The next schedule poll can retry.
+     */
+
+    showStatus(
+      `Finalization pending: ${error.message}`
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   CHECK SCHEDULE
+   ============================================================ */
+
+async function checkSchedule(){
+
+  if(!monitoring){
+
+    return;
+
+  }
+
+
+  try{
+
+    const schedule =
+      await getJSON(
+        '/api/attendance/camera/schedule'
+      );
+
+
+    /* ========================================================
+       ACTIVE CLASS
+       ======================================================== */
+
+    if(
+      schedule.has_active_class
+    ){
+
+      const nextClass = {
+
+        timetable_id:
+          schedule.timetable_id,
+
+        date:
+          schedule.date,
+
+        subject:
+          schedule.subject,
+
+        class_name:
+          schedule.class_name,
+
+        faculty:
+          schedule.faculty,
+
+        camera_start_time:
+          schedule.camera_start_time,
+
+        camera_end_time:
+          schedule.camera_end_time
+
+      };
+
+
+      /*
+       * If timetable changed, finalize
+       * the previous class first.
+       */
+
+      if(
+        currentClass &&
+        String(
+          currentClass.timetable_id
+        ) !==
+        String(
+          nextClass.timetable_id
+        )
+      ){
+
+        await finalizePreviousClass(
+          currentClass
+        );
+
+      }
+
+
+      const isNewClass =
+        !currentClass ||
+        String(
+          currentClass.timetable_id
+        ) !==
+        String(
+          nextClass.timetable_id
+        );
+
+
+      currentClass =
+        nextClass;
+
+
+      /*
+       * NEW CLASS STARTED
+       */
+
+      if(isNewClass){
+
+        studentBox.textContent =
+          'Waiting for student recognition...';
+
+
+        finalSection.hidden =
+          true;
+
+
+        classPill.textContent =
+          `${
+            schedule.subject ||
+            schedule.class_name ||
+            'Class'
+          } · ${
+            schedule.faculty ||
+            'Faculty'
+          }`;
+
+
+        windowPill.textContent =
+          `Attendance active: ${
+            schedule.camera_start_time ||
+            schedule.start_time ||
+            ''
+          } – ${
+            schedule.camera_end_time ||
+            schedule.end_time ||
+            ''
+          }`;
+
+
+        showStatus(
+          `Class started. Attendance is active for the entire scheduled class until ${
+            schedule.camera_end_time ||
+            schedule.end_time ||
+            'class end'
+          }.`
+        );
+
+      }
+      else{
+
+        /*
+         * Existing class continues.
+         */
+
+        classPill.textContent =
+          `${
+            schedule.subject ||
+            schedule.class_name ||
+            'Class'
+          } · ${
+            schedule.faculty ||
+            'Faculty'
+          }`;
+
+
+        windowPill.textContent =
+          `Attendance active: ${
+            schedule.camera_start_time ||
+            schedule.start_time ||
+            ''
+          } – ${
+            schedule.camera_end_time ||
+            schedule.end_time ||
+            ''
+          }`;
+
+      }
+
+    }
+
+
+    /* ========================================================
+       NO ACTIVE CLASS
+       ======================================================== */
+
+    else{
+
+      /*
+       * A class was active immediately before this
+       * schedule check, therefore it has ended.
+       */
+
+      if(currentClass){
+
+        const previous =
+          currentClass;
+
+
+        currentClass =
+          null;
+
+
+        await finalizePreviousClass(
+          previous
+        );
+
+
+        /*
+         * Immediately check again.
+         *
+         * This allows the next class to become active
+         * without waiting for another long interval.
+         */
+
+        if(monitoring){
+
+          setTimeout(
+            checkSchedule,
+            100
+          );
+
+        }
+
+        return;
+
+      }
+
+
+      classPill.textContent =
+        'No active class';
+
+
+      windowPill.textContent =
+        'Waiting for next scheduled class';
+
+
+      showStatus(
+        schedule.message ||
+        'Outside class time. Waiting for the next scheduled class.'
+      );
+
+    }
+
+
+  }
+  catch(error){
+
+    showStatus(
+      `Schedule check failed: ${error.message}`
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   SEND CAMERA FRAME
+   ============================================================ */
+
+async function sendFrame(){
+
+  /*
+   * Don't send frames when:
+   *
+   * - another frame is being processed
+   * - monitoring is stopped
+   * - there is no active class
+   * - camera is not ready
+   */
+
+  if(
+    busy ||
+    !monitoring ||
+    !currentClass ||
+    !video.videoWidth ||
+    !stream
+  ){
+
+    return;
+
+  }
+
+
+  busy = true;
+
+
+  try{
+
+    const canvas =
+      document.createElement(
+        'canvas'
+      );
+
+
+    /*
+     * Keep the existing 640px processing size.
+     */
+
+    canvas.width =
+      640;
+
+
+    canvas.height =
+      Math.round(
+        640 *
+        video.videoHeight /
+        video.videoWidth
+      );
+
+
+    const ctx =
+      canvas.getContext(
+        '2d'
+      );
+
+
+    /*
+     * Preserve mirrored-camera behavior.
+     */
+
+    ctx.translate(
+      canvas.width,
+      0
+    );
+
+
+    ctx.scale(
+      -1,
+      1
+    );
+
+
+    ctx.drawImage(
+      video,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+
+    const result =
+      await postJSON(
+        '/api/attendance/camera/frame',
+        {
+          image:
+            canvas.toDataURL(
+              'image/jpeg',
+              0.82
+            )
+        }
+      );
+
+
+    /* ========================================================
+       STUDENT RECOGNIZED
+       ======================================================== */
+
+    if(
+      result.state ===
+      'marked'
+    ){
+
+      studentBox.textContent =
+        `Recognized: ${
+          result.name
+        } | Roll No: ${
+          result.roll_number
+        } | Status: ${
+          result.status
+        }${
+          result.already_marked
+            ? ' (already recorded)'
+            : ''
+        }`;
+
+
+      showStatus(
+        result.message
+      );
+
+    }
+
+
+    /* ========================================================
+       NO FACE
+       ======================================================== */
+
+    else if(
+      result.state ===
+      'no_face'
+    ){
+
+      showStatus(
+        result.message
+      );
+
+    }
+
+
+    /* ========================================================
+       UNRECOGNIZED
+       ======================================================== */
+
+    else if(
+      result.state ===
+      'unrecognized'
+    ){
+
+      showStatus(
+        result.message
+      );
+
+    }
+
+
+  }
+  catch(error){
+
+    showStatus(
+      error.message
+    );
+
+  }
+  finally{
+
+    busy = false;
+
+  }
+
+}
+
+
+/* ============================================================
+   START MONITORING
+   ============================================================ */
+
+startBtn.addEventListener(
+  'click',
+  async ()=>{
+
+    startBtn.disabled =
+      true;
+
+
+    studentBox.textContent =
+      '';
+
+
+    finalSection.hidden =
+      true;
+
+
+    try{
+
+      /*
+       * CAMERA PERMISSION
+       */
+
+      stream =
+        await navigator
+          .mediaDevices
+          .getUserMedia({
+
+            video:{
+
+              facingMode:'user',
+
+              width:{
+                ideal:640
+              },
+
+              height:{
+                ideal:480
+              }
+
+            },
+
+            audio:false
+
+          });
+
+
+      video.srcObject =
+        stream;
+
+
+      await video.play();
+
+
+      /*
+       * START SERVER-SIDE CAMERA ATTENDANCE
+       */
+
+      const result =
+        await postJSON(
+          '/api/attendance/camera/start'
+        );
+
+
+      monitoring =
+        true;
+
+
+      stopBtn.disabled =
+        false;
+
+
+      showStatus(
+        result.message
+      );
+
+
+      /*
+       * Immediately check the current class.
+       */
+
+      await checkSchedule();
+
+
+      /*
+       * Check schedule every second.
+       *
+       * This is NOT a 25-minute attendance window.
+       *
+       * It only checks whether the scheduled class
+       * has started or ended.
+       */
+
+      scheduleTimer =
+        setInterval(
+          checkSchedule,
+          1000
+        );
+
+
+      /*
+       * Continue face recognition throughout
+       * the complete active class.
+       */
+
+      frameTimer =
+        setInterval(
+          sendFrame,
+          700
+        );
+
+
+    }
+    catch(error){
+
+      stopMonitoring(
+
+        error.name ===
+        'NotAllowedError'
+
+          ? 'Camera permission was denied. Allow camera access and try again.'
+
+          : error.message
+
+      );
+
+    }
+
+  }
+);
+
+async function startScheduledClass(schedule) {
+  const result = await postJSON(
+    '/api/attendance/camera/start'
+  );
+
+  currentClass = {
+    timetable_id: result.timetable_id ?? schedule.timetable_id,
+    date: result.date ?? schedule.date,
+    subject: schedule.subject,
+    class_name: schedule.class_name,
+    faculty: schedule.faculty,
+    camera_start_time: schedule.camera_start_time,
+    camera_end_time: schedule.camera_end_time
+  };
+
+  classPill.textContent =
+    `${schedule.subject || schedule.class_name || 'Class'} · ${schedule.faculty || 'Faculty'}`;
+
+  windowPill.textContent =
+    `Attendance active: ${schedule.camera_start_time || schedule.start_time || ''} – ${schedule.camera_end_time || schedule.end_time || ''}`;
+
+  studentBox.textContent =
+    'Waiting for student recognition...';
+
+  showStatus(
+    result.message || 'Attendance started for the scheduled class.'
+  );
+}
+/* ============================================================
+   MANUAL STOP
+   Stop camera monitoring only.
+   Do NOT finalize attendance or clear the server session.
+   ============================================================ */
+
+stopBtn.addEventListener('click', () => {
+  // Stop local camera and polling only.
+  // Keep the server-side class attendance session intact.
+  stopMonitoring(
+    'Monitoring paused. Click Enable Camera & Monitor Schedule to resume this class.'
+  );
+
+  // Do not call finalizePreviousClass() here.
+});
+
+/* ============================================================
+   PAGE CLOSE
+   ============================================================ */
+
+window.addEventListener(
+  'beforeunload',
+  ()=>{
+
+    if(stream){
+
+      stream
+        .getTracks()
+        .forEach(
+          track =>
+            track.stop()
+        );
+
+    }
+
+  }
+);
+
+</script>
+
+</body>
+</html>

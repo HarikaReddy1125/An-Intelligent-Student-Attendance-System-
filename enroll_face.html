@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Face Enrollment | Intelligent Attendance</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #ffffff;
+            color: #111111;
+        }
+
+        /* ==============================
+           NAVBAR
+        ============================== */
+
+        .navbar {
+            background: #111111;
+            color: #ffffff;
+            padding: 15px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 3px solid #dc2626;
+        }
+
+        .brand {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 19px;
+            font-weight: 700;
+        }
+
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .role {
+            color: #ffffff;
+            background: #dc2626;
+            padding: 6px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .logout {
+            color: #ffffff;
+            background: #dc2626;
+            padding: 8px 13px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .logout:hover {
+            background: #b91c1c;
+        }
+
+        /* ==============================
+           MAIN
+        ============================== */
+
+        .container {
+            max-width: 900px;
+            margin: 35px auto;
+            padding: 0 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #dc2626;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            color: #b91c1c;
+            text-decoration: underline;
+        }
+
+        .page-title {
+            margin-bottom: 25px;
+        }
+
+        .page-title h1 {
+            margin: 0 0 7px;
+            font-size: 29px;
+            color: #111111;
+        }
+
+        .page-title p {
+            margin: 0;
+            color: #666666;
+        }
+
+        /* ==============================
+           STUDENT INFO
+        ============================== */
+
+        .student-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 22px;
+        }
+
+        .info-box {
+            position: relative;
+            overflow: hidden;
+
+            background: #ffffff;
+            border: 1px solid #dddddd;
+            border-radius: 10px;
+            padding: 18px;
+
+            box-shadow:
+                0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .info-box::before,
+        .info-box::after {
+            content: "";
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            pointer-events: none;
+            opacity: 0.16;
+
+            background:
+                repeating-radial-gradient(
+                    circle at center,
+                    transparent 0,
+                    transparent 13px,
+                    #dc2626 14px,
+                    transparent 15px
+                ),
+                repeating-conic-gradient(
+                    from 0deg,
+                    transparent 0deg,
+                    transparent 17deg,
+                    #dc2626 18deg,
+                    transparent 19deg
+                );
+        }
+
+        .info-box::before {
+            top: -45px;
+            right: -45px;
+        }
+
+        .info-box::after {
+            bottom: -45px;
+            left: -45px;
+        }
+
+        .info-box > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        .info-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #777777;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .info-value {
+            color: #111111;
+            font-size: 18px;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        /* ==============================
+           ENROLLMENT PANEL
+        ============================== */
+
+        .enrollment-panel {
+            position: relative;
+            overflow: hidden;
+
+            background: #ffffff;
+            border: 1px solid #dddddd;
+            border-radius: 12px;
+            padding: 25px;
+
+            box-shadow:
+                0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .enrollment-panel::before,
+        .enrollment-panel::after {
+            content: "";
+            position: absolute;
+            width: 170px;
+            height: 170px;
+            pointer-events: none;
+            opacity: 0.13;
+
+            background:
+                repeating-radial-gradient(
+                    circle at center,
+                    transparent 0,
+                    transparent 18px,
+                    #dc2626 19px,
+                    transparent 20px
+                ),
+                repeating-conic-gradient(
+                    from 0deg,
+                    transparent 0deg,
+                    transparent 14deg,
+                    #dc2626 15deg,
+                    transparent 16deg
+                );
+        }
+
+        .enrollment-panel::before {
+            top: -75px;
+            right: -75px;
+        }
+
+        .enrollment-panel::after {
+            bottom: -75px;
+            left: -75px;
+        }
+
+        .enrollment-panel > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        .enrollment-panel h2 {
+            margin: 0 0 8px;
+            font-size: 22px;
+            color: #111111;
+        }
+
+        .description {
+            margin: 0 0 20px;
+            color: #666666;
+            line-height: 1.6;
+        }
+
+        /* ==============================
+           CAMERA
+        ============================== */
+
+        .camera-container {
+            display: none;
+            width: 100%;
+            max-width: 650px;
+            margin: 0 auto 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #111111;
+            border: 2px solid #dc2626;
+        }
+
+        .camera-container.active {
+            display: block;
+        }
+
+        #video {
+            display: block;
+            width: 100%;
+            height: auto;
+            min-height: 300px;
+            max-height: 500px;
+            object-fit: cover;
+            background: #111111;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        /* ==============================
+           PROGRESS
+        ============================== */
+
+        .progress-area {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .progress-area.active {
+            display: block;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            overflow: hidden;
+            border-radius: 20px;
+            background: #eeeeee;
+        }
+
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: #dc2626;
+            border-radius: 20px;
+            transition: width 0.25s ease;
+        }
+
+        /* ==============================
+           STATUS
+        ============================== */
+
+        .status {
+            display: none;
+            padding: 13px 15px;
+            margin-bottom: 18px;
+            border-radius: 7px;
+            border: 1px solid #dddddd;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .status.active {
+            display: block;
+        }
+
+        .status.info {
+            background: #f8f8f8;
+            color: #333333;
+            border-left: 5px solid #111111;
+        }
+
+        .status.success {
+            background: #f0fdf4;
+            color: #166534;
+            border-color: #bbf7d0;
+            border-left: 5px solid #15803d;
+        }
+
+        .status.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border-color: #fecaca;
+            border-left: 5px solid #dc2626;
+        }
+
+        /* ==============================
+           BUTTONS
+        ============================== */
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .btn {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+
+            min-height: 44px;
+            padding: 10px 20px;
+
+            border-radius: 7px;
+            border: 1px solid transparent;
+
+            font-size: 14px;
+            font-weight: 700;
+
+            cursor: pointer;
+            text-decoration: none;
+
+            transition:
+                background 0.2s ease,
+                transform 0.15s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-red {
+            background: #dc2626;
+            color: #ffffff;
+            border-color: #dc2626;
+        }
+
+        .btn-red:hover {
+            background: #b91c1c;
+        }
+
+        .btn-black {
+            background: #111111;
+            color: #ffffff;
+            border-color: #111111;
+        }
+
+        .btn-black:hover {
+            background: #000000;
+        }
+
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ==============================
+           INSTRUCTIONS
+        ============================== */
+
+        .instructions {
+            margin-top: 25px;
+            padding: 20px;
+
+            background: #fafafa;
+            border: 1px solid #e5e5e5;
+            border-radius: 9px;
+        }
+
+        .instructions h3 {
+            margin: 0 0 12px;
+            color: #111111;
+            font-size: 17px;
+        }
+
+        .instructions ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #555555;
+        }
+
+        .instructions li {
+            margin-bottom: 7px;
+        }
+
+        /* ==============================
+           RESPONSIVE
+        ============================== */
+
+        @media (max-width: 700px) {
+
+            .navbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .navbar-right {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .container {
+                margin: 25px auto;
+                padding: 0 14px;
+            }
+
+            .page-title h1 {
+                font-size: 25px;
+            }
+
+            .student-info {
+                grid-template-columns: 1fr;
+            }
+
+            .enrollment-panel {
+                padding: 18px;
+            }
+
+            #video {
+                min-height: 240px;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ==============================
+         NAVBAR
+    ============================== -->
+
+    <header class="navbar">
+
+        <a class="brand"
+           href="{{ url_for('dashboard') }}">
+            Intelligent Student Attendance System
+        </a>
+
+        <div class="navbar-right">
+
+            <span>
+                {{ username|default('Admin') }}
+            </span>
+
+            <span class="role">
+                {{ role|default('admin')|upper }}
+            </span>
+
+            <a class="logout"
+               href="{{ url_for('logout') }}">
+                Logout
+            </a>
+
+        </div>
+
+    </header>
+
+
+    <!-- ==============================
+         MAIN
+    ============================== -->
+
+    <main class="container">
+
+        <a class="back-link"
+           href="{{ url_for('admin_students') }}">
+            ← Back to Students
+        </a>
+
+
+        <div class="page-title">
+
+            <h1>
+                Face Enrollment
+            </h1>
+
+            <p>
+                Capture the student's face for attendance recognition.
+            </p>
+
+        </div>
+
+
+        <!-- ==============================
+             STUDENT INFORMATION
+        ============================== -->
+
+        <div class="student-info">
+
+            <div class="info-box">
+
+                <span class="info-label">
+                    Roll Number
+                </span>
+
+                <div class="info-value">
+                    {{ student["student_id"] }}
+                </div>
+
+            </div>
+
+
+            <div class="info-box">
+
+                <span class="info-label">
+                    Student Name
+                </span>
+
+                <div class="info-value">
+                    {{ student["name"] }}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ==============================
+             ENROLLMENT
+        ============================== -->
+
+        <section class="enrollment-panel">
+
+            <h2>
+                Enroll Face
+            </h2>
+
+            <p class="description">
+                Click <strong>Start Enrolling Face</strong> to open the
+                camera and begin capturing the student's face.
+            </p>
+
+
+            <!-- Status -->
+
+            <div id="status"
+                 class="status"
+                 role="status">
+            </div>
+
+
+            <!-- Camera -->
+
+            <div id="cameraContainer"
+                 class="camera-container">
+
+                <video id="video"
+                       autoplay
+                       playsinline>
+                </video>
+
+            </div>
+
+
+            <!-- Hidden canvas -->
+
+            <canvas id="canvas"></canvas>
+
+
+            <!-- Progress -->
+
+            <div id="progressArea"
+                 class="progress-area">
+
+                <div class="progress-header">
+
+                    <span>
+                        Enrollment Progress
+                    </span>
+
+                    <span id="progressText">
+                        0%
+                    </span>
+
+                </div>
+
+                <div class="progress-bar">
+
+                    <div id="progressFill"
+                         class="progress-fill">
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Buttons -->
+
+            <div class="buttons">
+
+                <button
+                    id="startButton"
+                    type="button"
+                    class="btn btn-red">
+
+                    Start Enrolling Face
+
+                </button>
+
+
+                <a
+                    href="{{ url_for('admin_students') }}"
+                    class="btn btn-black">
+
+                    Cancel
+
+                </a>
+
+            </div>
+
+
+            <!-- Instructions -->
+
+            <div class="instructions">
+
+                <h3>
+                    Enrollment Instructions
+                </h3>
+
+                <ul>
+
+                    <li>
+                        Allow browser access to your camera.
+                    </li>
+
+                    <li>
+                        Sit directly in front of the camera.
+                    </li>
+
+                    <li>
+                        Keep your face clearly visible.
+                    </li>
+
+                    <li>
+                        Make sure there is sufficient lighting.
+                    </li>
+
+                    <li>
+                        Look directly at the camera while enrolling.
+                    </li>
+
+                    <li>
+                        Avoid wearing anything that covers your face.
+                    </li>
+
+                </ul>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script>
+
+        /*
+         * ============================================================
+         * FACE ENROLLMENT
+         * ============================================================
+         *
+         * IMPORTANT:
+         *
+         * This page deliberately does NOT call response.json()
+         * blindly.
+         *
+         * If Flask returns an HTML error page instead of JSON,
+         * the error will now be displayed properly instead of:
+         *
+         * Unexpected token '<'
+         *
+         * or:
+         *
+         * Unexpected token 's'
+         * ============================================================
+         */
+
+
+        const studentDbId = {{ student["id"]|tojson }};
+
+        const startButton =
+            document.getElementById("startButton");
+
+        const cameraContainer =
+            document.getElementById("cameraContainer");
+
+        const video =
+            document.getElementById("video");
+
+        const canvas =
+            document.getElementById("canvas");
+
+        const progressArea =
+            document.getElementById("progressArea");
+
+        const progressFill =
+            document.getElementById("progressFill");
+
+        const progressText =
+            document.getElementById("progressText");
+
+        const statusBox =
+            document.getElementById("status");
+
+
+        let stream = null;
+
+        let enrolling = false;
+
+        let captureTimer = null;
+
+        let capturedFrames = 0;
+
+        const totalFrames = 10;
+
+
+        /* ============================================================
+           STATUS
+        ============================================================ */
+
+        function showStatus(message, type) {
+
+            statusBox.textContent = message;
+
+            statusBox.className =
+                "status active " + (type || "info");
+        }
+
+
+        function hideStatus() {
+
+            statusBox.textContent = "";
+
+            statusBox.className = "status";
+        }
+
+
+        /* ============================================================
+           PROGRESS
+        ============================================================ */
+
+        function updateProgress(value) {
+
+            value = Math.max(
+                0,
+                Math.min(100, value)
+            );
+
+            progressFill.style.width =
+                value + "%";
+
+            progressText.textContent =
+                Math.round(value) + "%";
+        }
+
+
+        /* ============================================================
+           STOP CAMERA
+        ============================================================ */
+
+        function stopCamera() {
+
+            if (captureTimer) {
+
+                clearInterval(captureTimer);
+
+                captureTimer = null;
+            }
+
+
+            if (stream) {
+
+                stream.getTracks().forEach(
+                    function(track) {
+
+                        track.stop();
+
+                    }
+                );
+
+                stream = null;
+            }
+
+            video.srcObject = null;
+
+            cameraContainer.classList.remove("active");
+        }
+
+
+        /* ============================================================
+           START CAMERA
+        ============================================================ */
+
+        async function startCamera() {
+
+            try {
+
+                if (!navigator.mediaDevices ||
+                    !navigator.mediaDevices.getUserMedia) {
+
+                    throw new Error(
+                        "Camera access is not supported by this browser."
+                    );
+                }
+
+
+                stream =
+                    await navigator.mediaDevices.getUserMedia({
+
+                        video: {
+                            width: {
+                                ideal: 640
+                            },
+
+                            height: {
+                                ideal: 480
+                            },
+
+                            facingMode: "user"
+                        },
+
+                        audio: false
+
+                    });
+
+
+                video.srcObject = stream;
+
+                cameraContainer.classList.add("active");
+
+                await video.play();
+
+
+                return true;
+
+            } catch (error) {
+
+                console.error(
+                    "Camera error:",
+                    error
+                );
+
+                showStatus(
+                    "Unable to access the camera. Please allow camera permission and try again.",
+                    "error"
+                );
+
+                stopCamera();
+
+                return false;
+            }
+        }
+
+
+        /* ============================================================
+           SEND FRAME TO FLASK
+        ============================================================ */
+
+        async function sendFrame() {
+
+            if (!enrolling) {
+                return false;
+            }
+
+
+            if (!video.videoWidth ||
+                !video.videoHeight) {
+
+                return false;
+            }
+
+
+            canvas.width =
+                video.videoWidth;
+
+            canvas.height =
+                video.videoHeight;
+
+
+            const context =
+                canvas.getContext("2d");
+
+
+            context.drawImage(
+                video,
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+
+            /*
+             * JPEG frame.
+             */
+
+            const imageData =
+                canvas.toDataURL(
+                    "image/jpeg",
+                    0.85
+                );
+
+
+            try {
+
+                /*
+                 * IMPORTANT:
+                 *
+                 * The backend endpoint must return JSON.
+                 *
+                 * We use fetch with the current student's
+                 * enrollment URL.
+                 */
+
+                const response =
+                    await fetch(
+                        "{{ url_for('enroll_student_face', student_db_id=student['id']) }}",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json",
+
+                                "Accept":
+                                    "application/json"
+                            },
+
+                            body: JSON.stringify({
+
+                                student_db_id:
+                                    studentDbId,
+
+                                image:
+                                    imageData
+
+                            })
+                        }
+                    );
+
+
+                /*
+                 * Read response as text FIRST.
+                 *
+                 * This prevents:
+                 *
+                 * Unexpected token '<'
+                 *
+                 * when Flask sends HTML.
+                 */
+
+                const rawText =
+                    await response.text();
+
+
+                let data = null;
+
+
+                try {
+
+                    data =
+                        JSON.parse(rawText);
+
+                } catch (jsonError) {
+
+                    console.error(
+                        "Server returned non-JSON:",
+                        rawText
+                    );
+
+                    throw new Error(
+                        "The server returned an invalid response. Check the Flask terminal for the actual error."
+                    );
+                }
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.message ||
+                        data.error ||
+                        "Face enrollment request failed."
+                    );
+                }
+
+
+                if (data.success === true) {
+
+                    capturedFrames++;
+
+                    const progress =
+                        (capturedFrames /
+                            totalFrames) * 100;
+
+
+                    updateProgress(progress);
+
+
+                    if (capturedFrames >= totalFrames) {
+
+                        enrolling = false;
+
+                        stopCamera();
+
+                        updateProgress(100);
+
+                        showStatus(
+                            data.message ||
+                            "Face enrolled successfully.",
+                            "success"
+                        );
+
+                        startButton.disabled = false;
+
+                        startButton.textContent =
+                            "Face Enrolled";
+
+                        return true;
+                    }
+
+
+                    return true;
+                }
+
+
+                /*
+                 * Backend can return success=false
+                 */
+
+                if (data.success === false) {
+
+                    throw new Error(
+                        data.message ||
+                        data.error ||
+                        "Face could not be detected."
+                    );
+                }
+
+
+                return true;
+
+
+            } catch (error) {
+
+                console.error(
+                    "Enrollment request error:",
+                    error
+                );
+
+                enrolling = false;
+
+                stopCamera();
+
+                startButton.disabled = false;
+
+                showStatus(
+                    error.message ||
+                    "Face enrollment failed.",
+                    "error"
+                );
+
+                return false;
+            }
+        }
+
+
+        /* ============================================================
+           START ENROLLMENT
+        ============================================================ */
+
+        async function startEnrollment() {
+
+            if (enrolling) {
+                return;
+            }
+
+
+            capturedFrames = 0;
+
+            updateProgress(0);
+
+            progressArea.classList.add("active");
+
+            hideStatus();
+
+
+            startButton.disabled = true;
+
+            startButton.textContent =
+                "Starting Camera...";
+
+
+            const cameraStarted =
+                await startCamera();
+
+
+            if (!cameraStarted) {
+
+                startButton.disabled = false;
+
+                startButton.textContent =
+                    "Start Enrolling Face";
+
+                return;
+            }
+
+
+            enrolling = true;
+
+            startButton.textContent =
+                "Enrolling Face...";
+
+
+            showStatus(
+                "Camera started. Look directly at the camera and keep your face steady.",
+                "info"
+            );
+
+
+            /*
+             * Give the camera a short moment to initialise.
+             */
+
+            setTimeout(
+                function() {
+
+                    if (!enrolling) {
+                        return;
+                    }
+
+
+                    /*
+                     * Capture approximately one frame
+                     * every 700 milliseconds.
+                     */
+
+                    captureTimer =
+                        setInterval(
+                            async function() {
+
+                                if (!enrolling) {
+
+                                    return;
+                                }
+
+
+                                await sendFrame();
+
+
+                            },
+                            700
+                        );
+
+
+                },
+                1000
+            );
+        }
+
+
+        /* ============================================================
+           BUTTON
+        ============================================================ */
+
+        startButton.addEventListener(
+            "click",
+            startEnrollment
+        );
+
+
+        /* ============================================================
+           PAGE CLEANUP
+        ============================================================ */
+
+        window.addEventListener(
+            "beforeunload",
+            function() {
+
+                stopCamera();
+
+            }
+        );
+
+    </script>
+
+</body>
+</html>

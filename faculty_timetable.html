@@ -1,0 +1,295 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Timetable</title>
+
+    <style>
+        :root {
+            --red: #dc2626;
+            --dark-red: #b91c1c;
+            --black: #111827;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --background: #f5f6f8;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--background);
+            color: var(--black);
+        }
+
+        header {
+            background: white;
+            padding: 22px max(20px, calc((100% - 1150px) / 2));
+            border-bottom: 1px solid var(--border);
+        }
+
+        header h1 { margin: 0; font-size: 24px; }
+        header p { margin: 7px 0 0; color: var(--muted); }
+
+        nav {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 10px max(20px, calc((100% - 1150px) / 2));
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        nav a {
+            padding: 11px 14px;
+            border-radius: 7px;
+            text-decoration: none;
+            color: var(--black);
+            font-size: 14px;
+        }
+
+        nav a:hover, nav a.active { background: #fee2e2; color: #991b1b; }
+        nav .logout { margin-left: auto; background: var(--red); color: white; }
+        nav .logout:hover { background: var(--dark-red); color: white; }
+
+        main { max-width: 1150px; margin: 28px auto; padding: 0 20px; }
+
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+
+        .btn {
+            display: inline-block;
+            background: var(--red);
+            color: white;
+            padding: 11px 15px;
+            border-radius: 7px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .btn:hover { background: var(--dark-red); }
+        .btn.secondary { background: white; color: var(--black); border: 1px solid var(--border); }
+
+        .panel {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            overflow: hidden;
+            box-shadow: 0 2px 7px rgba(0,0,0,.03);
+        }
+
+        .panel-header { padding: 20px 22px; border-bottom: 1px solid var(--border); }
+        .panel-header h2 { margin: 0 0 7px; font-size: 20px; }
+        .panel-header p { margin: 0; color: var(--muted); font-size: 14px; }
+
+        .table-wrap { overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; min-width: 780px; }
+
+        th, td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        th {
+            background: #f9fafb;
+            color: #4b5563;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: .04em;
+        }
+
+        tbody tr:hover { background: #fffafa; }
+        .empty { text-align: center; color: var(--muted); padding: 30px; }
+
+        footer { text-align: center; padding: 25px; color: var(--muted); font-size: 12px; }
+
+        @media (max-width: 650px) {
+            nav .logout { margin-left: 0; }
+            main { margin-top: 18px; }
+        }
+        /* =====================================================
+           SPIDER WEB ON PANELS
+           ===================================================== */
+
+        .panel::before,
+        .panel::after {
+
+            content: "";
+
+            position:
+                absolute;
+
+            width:
+                145px;
+
+            height:
+                145px;
+
+            opacity:
+                0.350;
+
+            pointer-events:
+                none;
+
+            z-index:
+                0;
+
+            background:
+                repeating-radial-gradient(
+                    circle at center,
+                    transparent 0,
+                    transparent 17px,
+                    var(--red) 18px,
+                    transparent 19px
+                ),
+                repeating-conic-gradient(
+                    from 0deg,
+                    transparent 0deg,
+                    transparent 14deg,
+                    var(--red) 15deg,
+                    transparent 16deg
+                );
+        }
+
+
+        .panel::before {
+
+            top:
+                -60px;
+
+            right:
+                -60px;
+        }
+
+
+        .panel::after {
+
+            bottom:
+                -60px;
+
+            left:
+                -60px;
+        }
+
+
+        /*
+            Keep panel content above spider web.
+        */
+
+        .panel > * {
+
+            position:
+                relative;
+
+            z-index:
+                2;
+        }
+
+
+    </style>
+</head>
+
+<body>
+<header>
+    <h1>My Timetable</h1>
+    <p>
+        {{ faculty["name"] if faculty and faculty["name"] else session.get("username", "Faculty") }}
+    </p>
+</header>
+
+<nav>
+    <a href="{{ url_for('faculty_dashboard') }}">Dashboard</a>
+    <a class="active" href="{{ url_for('faculty_timetable') }}">My Timetable</a>
+        <!-- TODAY'S ATTENDANCE -->
+
+    <a
+        href="{{ url_for('faculty_today_attendance_page') }}"
+    >
+        Today's Attendance
+    </a>
+    <a href="{{ url_for('faculty_attendance') }}">Attendance</a>
+
+    <a class="logout" href="{{ url_for('logout') }}">Logout</a>
+    
+
+    
+</nav>
+
+<main>
+    <div class="actions">
+        <a class="btn" href="{{ url_for('faculty_attendance') }}">View Date-Wise Attendance</a>
+        <a class="btn secondary" href="{{ url_for('faculty_dashboard') }}">Back to Dashboard</a>
+    </div>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Scheduled Classes</h2>
+            
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Day</th>
+                        <th>Subject</th>
+                        <th>Course Code</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Room</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in timetable %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ item["day"]|default("-", true) }}</td>
+
+                        <td>
+                            {% if "subject_name" in item.keys() and item["subject_name"] %}
+                                {{ item["subject_name"] }}
+                            {% elif "subject" in item.keys() and item["subject"] %}
+                                {{ item["subject"] }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        <td>{{ item["course_code"]|default("-", true) }}</td>
+                        <td>{{ item["start_time"]|default("")|time12 }}</td>
+                        <td>{{ item["end_time"]|default("")|time12 }}</td>
+
+                        <td>
+                            {% if "room_no" in item.keys() and item["room_no"] %}
+                                {{ item["room_no"] }}
+                            {% elif "room" in item.keys() and item["room"] %}
+                                {{ item["room"] }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="empty">
+                            No timetable entries were found for your faculty account.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<footer>Intelligent Student Attendance System</footer>
+</body>
+</html>
