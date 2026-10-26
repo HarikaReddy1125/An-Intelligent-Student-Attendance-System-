@@ -1,4 +1,5 @@
 ﻿import webbrowser
+from zoneinfo import ZoneInfo
 import threading
 from werkzeug.security import check_password_hash, generate_password_hash
 from attendance_notifications import notify_today_absentees
@@ -5992,7 +5993,7 @@ def student_timetable():
 
         return value
 
-    today_key = date.today().strftime("%A").lower()
+    today_key = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%A").lower()
     print("DEBUG STUDENT TIMETABLE:", date.today(), today_key)
     conn = get_db_connection()
 
