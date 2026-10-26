@@ -1,4 +1,4 @@
-﻿import webbrowser
+import webbrowser
 import threading
 from werkzeug.security import check_password_hash, generate_password_hash
 from attendance_notifications import notify_today_absentees
@@ -50,6 +50,7 @@ from flask_mail import Mail, Message
 from datetime import datetime, date, timedelta
 from functools import wraps
 from io import BytesIO
+from enrollstudents import enroll_bp
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -80,6 +81,7 @@ print(
 # ============================================================
 
 app = Flask(__name__)
+app.register_blueprint(enroll_bp)
 app.config.update(
     MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
     MAIL_PORT=int(os.getenv("MAIL_PORT", "587")),
@@ -11860,15 +11862,35 @@ def test_attendance_email():
 # ============================================================
 
 if __name__ == "__main__":
-    url = "http://127.0.0.1:5001"
 
-    threading.Timer(
-        1.0,
-        lambda: webbrowser.open(url)
-    ).start()
+    import os
 
-    app.run(
-        host="127.0.0.1",
-        port=5001,
-        debug=False
-    )
+    # Local development
+    if os.environ.get("RENDER") != "true":
+
+        url = "http://127.0.0.1:5001"
+
+        threading.Timer(
+            1.0,
+            lambda: webbrowser.open(url)
+        ).start()
+
+        app.run(
+            host="127.0.0.1",
+            port=5001,
+            debug=False
+        )
+
+    # Cloud / Render
+    else:
+
+        app.run(
+            host="0.0.0.0",
+            port=int(
+                os.environ.get(
+                    "PORT",
+                    5000
+                )
+            ),
+            debug=False
+        )
