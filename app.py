@@ -5024,8 +5024,8 @@ def student_dashboard():
     # DATE
     # ========================================================
 
-    today = date.today()
-    now_time = datetime.now().time()
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+    now_time = datetime.now(ZoneInfo("Asia/Kolkata")).time()
 
     selected_date = request.args.get(
         "date",
@@ -6201,10 +6201,9 @@ def faculty_dashboard():
         flash("Faculty account not found.", "error")
         return redirect(url_for("logout"))
 
-    today = date.today()
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
     today_iso = today.isoformat()
-    now = datetime.now()
-
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
     conn = get_db_connection()
 
     try:
@@ -6551,7 +6550,7 @@ def faculty_today_attendance_page():
         flash("Faculty account not found.", "error")
         return redirect(url_for("logout"))
 
-    today = date.today()
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
     today_iso = today.isoformat()
 
     selected_timetable_id = request.args.get(
@@ -7141,7 +7140,7 @@ def faculty_attendance():
         #     Only Unmarked
         # ========================================================
 
-        today = date.today()
+        today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
 
         class_state = "future"
 
@@ -8784,7 +8783,7 @@ def faculty_today_attendance_pdf():
             url_for("logout")
         )
 
-    today = date.today().isoformat()
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).date().isoformat()
 
     # IMPORTANT:
     # If a date/timetable_id was supplied in the URL,
