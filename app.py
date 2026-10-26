@@ -5993,6 +5993,7 @@ def student_timetable():
         return value
 
     today_key = date.today().strftime("%A").lower()
+    print("DEBUG STUDENT TIMETABLE:", date.today(), today_key)
     conn = get_db_connection()
 
     try:
