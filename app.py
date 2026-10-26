@@ -6356,7 +6356,8 @@ def faculty_dashboard():
 
                 class_datetime = datetime.combine(
                     candidate_date,
-                    start_time
+                    start_time,
+                    tzinfo=ZoneInfo("Asia/Kolkata")
                 )
 
                 if class_datetime > now:
