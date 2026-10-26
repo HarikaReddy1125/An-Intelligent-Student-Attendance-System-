@@ -1,0 +1,279 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Profile</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 30px 16px;
+            background: #ffffff;
+            color: #111111;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            color: #111111;
+            font-size: 30px;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: #444444;
+            font-size: 15px;
+        }
+
+        .back-link {
+            display: inline-block;
+            padding: 11px 16px;
+            border: 1px solid #c90024;
+            border-radius: 8px;
+            background: #ffffff;
+            color: #c90024;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            background: #c90024;
+            color: #ffffff;
+        }
+
+        .card {
+            padding: 26px;
+            border: 1px solid #e2e2e2;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            margin: 0 0 24px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #c90024;
+            color: #111111;
+            font-size: 21px;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 22px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            color: #111111;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            min-height: 44px;
+            padding: 12px 13px;
+            border: 1px solid #c90024;
+            border-radius: 7px;
+            outline: none;
+            background: #ffffff;
+            color: #111111;
+            font-size: 15px;
+        }
+
+        input[readonly] {
+            background: #ffffff;
+            color: #111111;
+            cursor: default;
+        }
+
+        input:focus {
+            border-color: #a0001c;
+            box-shadow: 0 0 0 3px rgba(201, 0, 36, 0.12);
+        }
+
+        .readonly-note {
+            margin: 22px 0 0;
+            padding: 12px 14px;
+            border-left: 4px solid #c90024;
+            background: #fff5f6;
+            color: #222222;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 20px 12px;
+            }
+
+            .card {
+                padding: 20px 16px;
+            }
+
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+        }
+/* Subtle spider-web patterns: top-right and bottom-left */
+body {
+    position: relative;
+    isolation: isolate;
+}
+
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    width: 280px;
+    height: 280px;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.16;
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+body::before {
+    top: 0;
+    right: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23c62828' stroke-width='1'%3E%3Cpath d='M200 0 L0 0 M200 0 L200 200 M200 0 L0 200 M200 0 L50 200 M200 0 L120 200 M200 0 L0 70 M200 0 L0 130 M200 0 L70 0 M200 0 L130 0'/%3E%3Cpath d='M170 0 Q170 30 200 30 M140 0 Q140 60 200 60 M110 0 Q110 90 200 90 M80 0 Q80 120 200 120 M50 0 Q50 150 200 150 M20 0 Q20 180 200 180'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+body::after {
+    bottom: 0;
+    left: 0;
+    transform: rotate(180deg);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23c62828' stroke-width='1'%3E%3Cpath d='M200 0 L0 0 M200 0 L200 200 M200 0 L0 200 M200 0 L50 200 M200 0 L120 200 M200 0 L0 70 M200 0 L0 130 M200 0 L70 0 M200 0 L130 0'/%3E%3Cpath d='M170 0 Q170 30 200 30 M140 0 Q140 60 200 60 M110 0 Q110 90 200 90 M80 0 Q80 120 200 120 M50 0 Q50 150 200 150 M20 0 Q20 180 200 180'/%3E%3C/g%3E%3C/svg%3E");
+}
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <header class="top-bar">
+            <div>
+                <h1>Student Profile</h1>
+                <p class="subtitle">
+                    View your personal and academic information.
+                </p>
+            </div>
+
+            <a class="back-link" href="{{ url_for('student_dashboard') }}">
+                ← Back to Dashboard
+            </a>
+        </header>
+
+        <section class="card">
+            <h2>Personal Information</h2>
+
+            <div class="profile-grid">
+                <div class="field">
+                    <label for="name">Name</label>
+                    <input
+                        id="name"
+                        type="text"
+                        value="{{ student['name'] or '' }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="student_id">Student ID</label>
+                    <input
+                        id="student_id"
+                        type="text"
+                        value="{{ student['student_id'] or '' }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="department">Department</label>
+                    <input
+                        id="department"
+                        type="text"
+                        value="{{ student['department'] or 'ECE' }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="year">Year</label>
+                    <input
+                        id="year"
+                        type="text"
+                        value="{{ student['year'] or '4th' }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="section">Section</label>
+                    <input
+                        id="section"
+                        type="text"
+                        value="{{ student['section'] or 'A' }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="email">Email</label>
+                    <input
+                        id="email"
+                        type="email"
+                        value="{{ student['email'] or '' }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="mobile">Mobile Number</label>
+                    <input
+                        id="mobile"
+                        type="text"
+                        value="{{ student['parent_mobile'] or '' }}"
+                        readonly
+                    >
+                </div>
+            </div>
+
+            <p class="readonly-note">
+                All profile details are read-only. To request a correction,
+                please contact your administrator.
+            </p>
+        </section>
+    </main>
+</body>
+</html>

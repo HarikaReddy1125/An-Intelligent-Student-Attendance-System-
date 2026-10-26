@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Faculty Management</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #ffffff;
+            color: #111111;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: #f9f9f9;
+            color: #030303;
+            padding: 15px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 3px solid #dc2626;
+        }
+
+        .navbar h1 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .user-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .role {
+            color: #ffffff;
+            background: #dc2626;
+            padding: 6px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .logout,
+        .back {
+            text-decoration: none;
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+
+        .logout {
+            background: #dc2626;
+        }
+
+        .logout:hover {
+            background: #b91c1c;
+        }
+
+        .back {
+            background: #ec0404;
+            border: 1px solid #dc2626;
+        }
+
+        .back:hover {
+            background: #dc2626;
+        }
+
+        .container {
+            max-width: 1250px;
+            margin: 25px auto;
+            padding: 0 18px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .header h2 {
+            font-size: 25px;
+            color: #111111;
+        }
+
+        .panel {
+            position: relative;
+            overflow: hidden;
+            background-color: #ffffff;
+            border: 1px solid #d1d1d1;
+            border-top: 3px solid #dc2626;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .panel::before {
+            content: "";
+            position: absolute;
+            width: 330px;
+            height: 330px;
+            right: -90px;
+            top: -110px;
+            opacity: 0.10;
+
+            background:
+                repeating-radial-gradient(
+                    circle at center,
+                    transparent 0,
+                    transparent 25px,
+                    #dc2626 26px,
+                    transparent 27px
+                ),
+                repeating-conic-gradient(
+                    from 0deg,
+                    transparent 0deg,
+                    transparent 14deg,
+                    #dc2626 15deg,
+                    transparent 16deg
+                );
+
+            pointer-events: none;
+        }
+
+        .panel::after {
+            content: "";
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            left: -100px;
+            bottom: -130px;
+            opacity: 0.06;
+
+            background:
+                repeating-radial-gradient(
+                    circle at center,
+                    transparent 0,
+                    transparent 22px,
+                    #000000 23px,
+                    transparent 24px
+                ),
+                repeating-conic-gradient(
+                    from 0deg,
+                    transparent 0deg,
+                    transparent 19deg,
+                    #000000 20deg,
+                    transparent 21deg
+                );
+
+            pointer-events: none;
+        }
+
+        .panel > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        .panel h3 {
+            color: #111111;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-left: 4px solid #dc2626;
+            padding-left: 9px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #222222;
+            margin-bottom: 5px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 9px 10px;
+            min-height: 38px;
+            background: #ffffff;
+            color: #111111;
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #dc2626;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.10);
+        }
+
+        button {
+            border: none;
+            cursor: pointer;
+            padding: 8px 11px;
+            border-radius: 5px;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .primary {
+            background: #dc2626;
+        }
+
+        .primary:hover {
+            background: #b91c1c;
+        }
+
+        .edit-button {
+            background: #e10a0a;
+        }
+
+        .edit-button:hover {
+            background: #333333;
+        }
+
+        .deactivate {
+            background: #dc2626;
+        }
+
+        .deactivate:hover {
+            background: #b91c1c;
+        }
+
+        .reactivate {
+            background: #15803d;
+        }
+
+        .reactivate:hover {
+            background: #166534;
+        }
+
+        /* REMOVE BUTTON - INACTIVE FACULTY ONLY */
+        .delete-button {
+            background: #000000;
+            border: 1px solid #dc2626;
+        }
+
+        .delete-button:hover {
+            background: #dc2626;
+        }
+
+        .hint {
+            color: #555555;
+            font-size: 12px;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+
+        .search {
+            margin-bottom: 14px;
+        }
+
+        .count {
+            color: #555555;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .count strong {
+            color: #dc2626;
+        }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid #dddddd;
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 850px;
+            background: #ffffff;
+        }
+
+        th,
+        td {
+            padding: 10px 9px;
+            border-bottom: 1px solid #eeeeee;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            background: #000000;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        td {
+            font-size: 13px;
+        }
+
+        tbody tr:hover {
+            background: #fff5f5;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .active {
+            display: inline-block;
+            color: #166534;
+            background: #dcfce7;
+            padding: 5px 9px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .inactive {
+            display: inline-block;
+            color: #991b1b;
+            background: #fee2e2;
+            padding: 5px 9px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .actions {
+            min-width: 250px;
+        }
+
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .actions form {
+            margin: 0;
+        }
+
+        .inline-edit {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 7px;
+        }
+
+        .inline-edit input {
+            min-width: 110px;
+            padding: 7px 8px;
+            min-height: 34px;
+        }
+
+        .flash {
+            padding: 10px 13px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background: #dcfce7;
+            color: #166534;
+            border-left: 4px solid #15803d;
+            font-size: 13px;
+        }
+
+        .flash.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left-color: #dc2626;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 25px;
+            color: #777777;
+            font-size: 13px;
+        }
+
+        @media (max-width: 900px) {
+
+            .form-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .navbar,
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .user-area {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 550px) {
+
+            .container {
+                margin: 18px auto;
+                padding: 0 12px;
+            }
+
+            .panel {
+                padding: 15px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h2 {
+                font-size: 21px;
+            }
+
+            .inline-edit {
+                grid-template-columns: 1fr;
+            }
+
+            .actions {
+                min-width: 190px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+
+    <nav class="navbar">
+
+        <h1>
+            Intelligent Student Attendance System
+        </h1>
+
+        <div class="user-area">
+
+            <span class="role">
+                {{ role|default('admin')|upper }}
+            </span>
+
+            <a
+                class="logout"
+                href="{{ url_for('logout') }}"
+            >
+                Logout
+            </a>
+
+        </div>
+
+    </nav>
+
+
+    <main class="container">
+
+        <!-- PAGE HEADER -->
+
+        <div class="header">
+
+            <h2>
+                Faculty Management
+            </h2>
+
+            <a
+                class="back"
+                href="{{ url_for('dashboard') }}"
+            >
+                ← Dashboard
+            </a>
+
+        </div>
+
+
+        <!-- FLASH MESSAGES -->
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+
+            {% if messages %}
+
+                {% for category, message in messages %}
+
+                    <div
+                        class="flash {% if category == 'error' %}error{% endif %}"
+                        role="status"
+                    >
+                        {{ message }}
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
+
+        {% endwith %}
+
+
+        <!-- ADD FACULTY -->
+
+        <section class="panel">
+
+            <h3>
+                Add Faculty Member
+            </h3>
+
+            <form
+                method="POST"
+                action="{{ url_for('add_faculty') }}"
+            >
+
+                <div class="form-grid">
+
+                    <div>
+
+                        <label for="new_name">
+                            Full Name
+                        </label>
+
+                        <input
+                            id="new_name"
+                            name="name"
+                            required
+                            maxlength="150"
+                        >
+
+                    </div>
+
+
+                    <div>
+
+                        <label for="new_username">
+                            Username
+                        </label>
+
+                        <input
+                            id="new_username"
+                            name="username"
+                            required
+                            maxlength="100"
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+
+                    <div>
+
+                        <label for="new_department">
+                            Department
+                        </label>
+
+                        <input
+                            id="new_department"
+                            name="department"
+                            value="ECE"
+                            required
+                            maxlength="100"
+                        >
+
+                    </div>
+
+
+                    <div>
+
+<div>
+    <label for="new_password">
+        Initial Password
+    </label>
+
+    <div style="position: relative;">
+
+        <input
+            id="new_password"
+            type="password"
+            name="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            style="padding-right: 75px;"
+        >
+
+        <button
+            type="button"
+            id="togglePassword"
+            onclick="togglePasswordVisibility()"
+            style="
+                position: absolute;
+                right: 6px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: #dc2626;
+                color: #ffffff;
+                border: 1px solid #dc2626;
+                padding: 5px 9px;
+                border-radius: 4px;
+                font-size: 11px;
+                cursor: pointer;
+            "
+        >
+            Show
+        </button>
+
+    </div>
+</div>
+
+
+
+<script>
+    function togglePasswordVisibility() {
+
+        const passwordInput =
+            document.getElementById("new_password");
+
+        const toggleButton =
+            document.getElementById("togglePassword");
+
+        if (passwordInput.type === "password") {
+
+            passwordInput.type = "text";
+            toggleButton.textContent = "Hide";
+
+        } else {
+
+            passwordInput.type = "password";
+            toggleButton.textContent = "Show";
+        }
+    }
+</script>
+
+
+                <p class="hint">
+
+                    Use at least 8 characters for the initial password.
+                    Usernames must be unique.
+
+                </p>
+
+
+                <div style="margin-top: 14px;">
+
+                    <button
+                        class="primary"
+                        type="submit"
+                    >
+                        Add Faculty
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+
+        <!-- FACULTY DIRECTORY -->
+
+        <section class="panel">
+
+            <h3>
+                Faculty Directory
+            </h3>
+
+
+            <input
+                type="text"
+                id="searchInput"
+                class="search"
+                placeholder="Search by name, username, department or status..."
+                aria-label="Search faculty"
+            >
+
+
+            <div class="count">
+
+                Total records:
+                <strong>
+                    {{ faculty_members|length }}
+                </strong>
+
+            </div>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>#</th>
+
+                            <th>
+                                Faculty Name
+                            </th>
+
+                            <th>
+                                Username
+                            </th>
+
+                            <th>
+                                Department
+                            </th>
+
+                            <th>
+                                Status
+                            </th>
+
+                            <th>
+                                Actions
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="facultyTable">
+
+                        {% for faculty in faculty_members %}
+
+                            <tr>
+
+                                <td>
+                                    {{ loop.index }}
+                                </td>
+
+
+                                <td>
+                                    <strong>
+                                        {{ faculty["name"] }}
+                                    </strong>
+                                </td>
+
+
+                                <td>
+                                    {{ faculty["username"] or "-" }}
+                                </td>
+
+
+                                <td>
+                                    {{ faculty["department"] or "-" }}
+                                </td>
+
+
+                                <td>
+
+                                    {% if faculty["active"] %}
+
+                                        <span class="active">
+                                            Active
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="inactive">
+                                            Inactive
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <!-- ACTIONS -->
+
+                                <td class="actions">
+
+                                    <!-- EDIT -->
+
+                                    <form
+                                        class="inline-edit"
+                                        method="POST"
+                                        action="{{ url_for('edit_faculty', faculty_id=faculty['id']) }}"
+                                    >
+
+                                        <input
+                                            name="name"
+                                            value="{{ faculty['name'] }}"
+                                            aria-label="Faculty name"
+                                            required
+                                            maxlength="150"
+                                        >
+
+                                        <input
+                                            name="department"
+                                            value="{{ faculty['department'] or 'ECE' }}"
+                                            aria-label="Department"
+                                            required
+                                            maxlength="100"
+                                        >
+
+                                        <button
+                                            class="edit-button"
+                                            type="submit"
+                                        >
+                                            Save
+                                        </button>
+
+                                    </form>
+
+
+                                    <!-- STATUS + DELETE -->
+
+                                    <div class="action-buttons">
+
+                                        <!-- ACTIVE FACULTY -->
+
+                                        {% if faculty["active"] %}
+
+                                            <form
+                                                method="POST"
+                                                action="{{ url_for('set_faculty_status', faculty_id=faculty['id']) }}"
+                                                onsubmit="return confirm('Deactivate this faculty member?');"
+                                            >
+
+                                                <input
+                                                    type="hidden"
+                                                    name="active"
+                                                    value="0"
+                                                >
+
+                                                <button
+                                                    class="deactivate"
+                                                    type="submit"
+                                                >
+                                                    Deactivate
+                                                </button>
+
+                                            </form>
+
+
+                                        <!-- INACTIVE FACULTY -->
+
+                                        {% else %}
+
+                                            <form
+                                                method="POST"
+                                                action="{{ url_for('set_faculty_status', faculty_id=faculty['id']) }}"
+                                                onsubmit="return confirm('Reactivate this faculty member?');"
+                                            >
+
+                                                <input
+                                                    type="hidden"
+                                                    name="active"
+                                                    value="1"
+                                                >
+
+                                                <button
+                                                    class="reactivate"
+                                                    type="submit"
+                                                >
+                                                    Reactivate
+                                                </button>
+
+                                            </form>
+
+
+                                            <!-- REMOVE BUTTON -->
+
+                                            <form
+                                                method="POST"
+                                                action="{{ url_for('delete_faculty', faculty_id=faculty['id']) }}"
+                                                onsubmit="return confirm('Permanently remove {{ faculty['name']|e }} from the database? This action cannot be undone.');"
+                                            >
+
+                                                <button
+                                                    type="submit"
+                                                    class="delete-button"
+                                                >
+                                                    Remove
+                                                </button>
+
+                                            </form>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+
+                        {% else %}
+
+                            <tr>
+
+                                <td
+                                    colspan="6"
+                                    class="empty"
+                                >
+                                    No faculty records found.
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- SEARCH -->
+
+    <script>
+
+        const searchInput =
+            document.getElementById("searchInput");
+
+        const table =
+            document.getElementById("facultyTable");
+
+
+        searchInput.addEventListener("input", function () {
+
+            const search =
+                this.value.toLowerCase().trim();
+
+
+            table.querySelectorAll("tr").forEach(function (row) {
+
+                const text =
+                    row.innerText.toLowerCase();
+
+
+                row.style.display =
+                    text.includes(search)
+                        ? ""
+                        : "none";
+
+            });
+
+        });
+
+    </script>
+
+</body>
+</html>

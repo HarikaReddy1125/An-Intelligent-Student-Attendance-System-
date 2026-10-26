@@ -1,0 +1,291 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Timetable</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 28px;
+            font-family: Arial, sans-serif;
+            background: #fff;
+            color: #111;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 16px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 26px;
+        }
+
+        header p {
+            margin-bottom: 0;
+        }
+
+        a {
+            color: #d71920;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 22px 0 12px;
+            font-size: 13px;
+        }
+
+        .legend-box {
+            width: 17px;
+            height: 17px;
+            border: 1px solid #d71920;
+            background: #ffdada;
+            border-radius: 3px;
+        }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 14px;
+            border: 1px solid #bbb;
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            min-width: 1000px;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #b8b8b8;
+            padding: 12px 7px;
+            text-align: center;
+            vertical-align: middle;
+            overflow-wrap: anywhere;
+        }
+
+        thead th {
+            background: #f3f3f3;
+            color: #111;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        th.day-heading {
+            width: 115px;
+            background: #eee;
+        }
+
+        td.day-name {
+            font-weight: 700;
+            text-align: left;
+            background: #f7f7f7;
+        }
+
+        td.class-cell {
+            background: #fff;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .class-name {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .class-details {
+            display: block;
+            color: #555;
+            font-size: 11px;
+            font-weight: 400;
+        }
+
+        /* Highlight today's entire row */
+        tr.today-row td.day-name {
+            background: #d71920;
+            color: #fff;
+        }
+
+        tr.today-row td.class-cell {
+            background: #fff0f0;
+            border-top: 2px solid #d71920;
+            border-bottom: 2px solid #d71920;
+        }
+
+        tr.today-row td.class-cell.has-class {
+            background: #ffdada;
+            border: 2px solid #d71920;
+        }
+
+        .today-label {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 3px 7px;
+            border-radius: 12px;
+            background: #fff;
+            color: #d71920;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        th.lunch-heading,
+        td.lunch-cell {
+            width: 48px;
+            background: #f4f4f4;
+            color: #555;
+        }
+
+        .lunch-text {
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 2px;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            margin: auto;
+        }
+
+        td.empty-cell {
+            background: #fff;
+        }
+
+        .empty {
+            padding: 25px;
+            background: #fafafa;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 14px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <div>
+        <h1>My Timetable</h1>
+        <p>
+            Welcome,
+            {{ student["name"] if student and student["name"] else "Student" }}
+        </p>
+    </div>
+
+    <nav>
+        <a href="{{ url_for('student_dashboard') }}">Dashboard</a>
+        &nbsp; | &nbsp;
+        <a href="{{ url_for('student_profile') }}">Student Profile</a>
+    </nav>
+</header>
+
+<div class="legend">
+    <span class="legend-box"></span>
+    <span>Today's sessions are highlighted in red.</span>
+</div>
+
+{% if weekly_rows %}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th class="day-heading">Day</th>
+                <th>9:30–10:30 AM</th>
+                <th>10:30–11:30 AM</th>
+                <th>11:30 AM–12:30 PM</th>
+                <th class="lunch-heading">12:30–1:30 PM</th>
+                <th>1:30–2:30 PM</th>
+                <th>2:30–3:30 PM</th>
+                <th>3:30–4:30 PM</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for day in weekly_rows %}
+            <tr class="{% if day.is_today %}today-row{% endif %}">
+
+                <td class="day-name">
+                    {{ day.name }}
+
+                    {% if day.is_today %}
+                        <br>
+                        <span class="today-label">TODAY</span>
+                    {% endif %}
+                </td>
+
+                {% for cell in day.cells %}
+                    {% if not cell.skip %}
+
+                        {% if cell.is_lunch %}
+                            <td class="lunch-cell">
+                                <div class="lunch-text">LUNCH</div>
+                            </td>
+
+                        {% elif cell.item %}
+                            <td class="class-cell has-class"
+                                colspan="{{ cell.colspan }}">
+
+                                <span class="class-name">
+                                    {{ cell.item.display_subject }}
+                                </span>
+
+                                <span class="class-details">
+                                    {{ cell.item.display_start_time }}
+                                    –
+                                    {{ cell.item.display_end_time }}
+                                    <br>
+                                    {{ cell.item.display_faculty }}
+                                    <br>
+                                    {{ cell.item.display_room }}
+                                </span>
+                            </td>
+
+                        {% else %}
+                            <td class="class-cell empty-cell"></td>
+                        {% endif %}
+
+                    {% endif %}
+                {% endfor %}
+
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% else %}
+    <p class="empty">No active timetable classes were found.</p>
+{% endif %}
+
+</body>
+</html>

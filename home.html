@@ -1,0 +1,354 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Class IV ECE A | Attendance System</title>
+
+    <!-- External red web theme -->
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/theme.css') }}">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            min-height: 100%;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #171717;
+            background: #ffffff;
+        }
+
+        /* Header */
+        header {
+            padding: 22px 7%;
+            background: rgba(255, 255, 255, 0.97);
+            border-bottom: 1px solid #eeeeee;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.035);
+        }
+
+        header h1 {
+            margin: 0;
+            color: #171717;
+            font-size: 23px;
+            font-weight: 750;
+        }
+
+        header p {
+            margin: 7px 0 0;
+            color: #666666;
+            font-size: 14px;
+        }
+
+        /* Main section */
+        main {
+            width: 100%;
+            max-width: 1100px;
+            margin: auto;
+            padding: 58px 22px 48px;
+            text-align: center;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            padding: 9px 15px;
+            border: 1px solid #ffd5d9;
+            border-radius: 30px;
+            background: #fff5f6;
+            color: #d9001b;
+            font-size: 12px;
+            font-weight: 750;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            margin: 22px 0 14px;
+            color: #171717;
+            font-size: clamp(30px, 5vw, 46px);
+            line-height: 1.2;
+            font-weight: 800;
+        }
+
+        .intro {
+            max-width: 620px;
+            margin: 0 auto;
+            color: #626262;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
+        /* Three portal cards */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 22px;
+            margin-top: 44px;
+            text-align: left;
+        }
+
+        .card {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 275px;
+            padding: 27px;
+            background: rgba(255, 255, 255, 0.97);
+            border: 1px solid #e8e8e8;
+            border-top: 3px solid #f20d22;
+            border-radius: 14px;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.045);
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease,
+                border-color 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: #ffc6cc;
+            box-shadow: 0 14px 32px rgba(242, 13, 34, 0.09);
+        }
+
+        .number {
+            display: grid;
+            place-items: center;
+            width: 44px;
+            height: 44px;
+            border: 1px solid #ffdadd;
+            border-radius: 12px;
+            background: #fff0f1;
+            color: #e0001b;
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .card h3 {
+            margin: 21px 0 11px;
+            color: #171717;
+            font-size: 20px;
+            line-height: 1.35;
+        }
+
+        .card p {
+            flex: 1;
+            margin: 0 0 25px;
+            color: #626262;
+            font-size: 14px;
+            line-height: 1.75;
+        }
+
+        /* Base button styling */
+        .action,
+        .action:visited {
+            display: block;
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #f20d22;
+            border-radius: 8px;
+            background: #f20d22;
+            color: #ffffff;
+            text-decoration: none;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 750;
+            transition:
+                background 0.2s ease,
+                color 0.2s ease,
+                border-color 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+        .action:hover {
+            background: #c90019;
+            border-color: #c90019;
+            color: #ffffff;
+            box-shadow: 0 5px 14px rgba(242, 13, 34, 0.18);
+        }
+
+        .action:focus-visible {
+            outline: 3px solid rgba(242, 13, 34, 0.3);
+            outline-offset: 3px;
+        }
+
+        /* Check Attendance:
+           white background normally, red on hover */
+        .action.check-attendance,
+        .action.check-attendance:visited {
+            background: #ffffff;
+            border-color: #f20d22;
+            color: #e0001b;
+        }
+
+        .action.check-attendance:hover,
+        .action.check-attendance:focus-visible {
+            background: #f20d22;
+            border-color: #f20d22;
+            color: #ffffff;
+        }
+
+        /* Secondary buttons remain white until hover */
+        .action.secondary,
+        .action.secondary:visited {
+            background: #ffffff;
+            border-color: #f20d22;
+            color: #e0001b;
+        }
+
+        .action.secondary:hover,
+        .action.secondary:focus-visible {
+            background: #f20d22;
+            border-color: #f20d22;
+            color: #ffffff;
+        }
+
+        .note {
+            margin-top: 30px;
+            color: #666666;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: auto;
+            padding: 21px;
+            border-top: 1px solid #eeeeee;
+            background: rgba(255, 255, 255, 0.97);
+            color: #666666;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        /* Mobile-friendly layout */
+        @media (max-width: 800px) {
+            .cards {
+                grid-template-columns: 1fr;
+                max-width: 520px;
+                margin-right: auto;
+                margin-left: auto;
+            }
+
+            main {
+                padding: 42px 20px;
+            }
+
+            .card {
+                min-height: 230px;
+            }
+
+            header {
+                padding: 20px;
+            }
+
+            header h1 {
+                font-size: 20px;
+                line-height: 1.4;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Intelligent Student Attendance System</h1>
+        <p>Electronics and Communication Engineering</p>
+    </header>
+
+    <main>
+        <div class="eyebrow">Smart Attendance Portal</div>
+
+        <h2>Welcome, Class IV ECE A</h2>
+
+        <p class="intro">
+            Manage classroom attendance through a simple and secure portal.
+            Select an option below to continue.
+        </p>
+
+        <section class="cards">
+
+            <!-- Check Attendance -->
+            <article class="card">
+                <div class="number">01</div>
+
+                <h3>Check Attendance</h3>
+
+                <p>
+                    Students and faculty can sign in to view their
+                    attendance information and related records.
+                </p>
+
+                <a class="action check-attendance"
+                   href="{{ url_for('login') }}">
+                    Check Attendance
+                </a>
+            </article>
+
+            <!-- Start Attendance -->
+            <article class="card">
+                <div class="number">02</div>
+
+                <h3>Start Marking Attendance</h3>
+
+                <p>
+                    Start classroom attendance using face recognition
+                    and the configured liveness verification process.
+                </p>
+
+                <a class="action secondary"
+                   href="{{ url_for('start_attendance_page') }}">
+                    Start Attendance
+                </a>
+            </article>
+
+            <!-- Admin Login -->
+            <article class="card">
+                <div class="number">03</div>
+
+                <h3>Admin Login</h3>
+
+                <p>
+                    Authorized administrators can manage student details,
+                    faculty records, timetable information and attendance.
+                </p>
+
+                <a class="action secondary"
+                   href="{{ url_for('login') }}">
+                    Admin Login
+                </a>
+            </article>
+
+        </section>
+
+        <p class="note">
+            Authorized access only. Please protect student information
+            and keep your login credentials secure.
+        </p>
+    </main>
+
+    <footer>
+        &copy; 2026 Intelligent Student Attendance System
+    </footer>
+
+</body>
+</html>

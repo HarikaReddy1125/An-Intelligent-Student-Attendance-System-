@@ -1,0 +1,626 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Date-Wise Attendance</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        :root {
+            --red: #dc2626;
+            --dark-red: #b91c1c;
+            --light-red: #fee2e2;
+            --very-light-red: #fff7f7;
+            --black: #111827;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --background: #f5f6f8;
+            --white: #ffffff;
+            --green: #15803d;
+            --green-bg: #dcfce7;
+            --yellow: #a16207;
+            --yellow-bg: #fef9c3;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--background);
+            color: var(--black);
+        }
+
+        .container { max-width: 1500px; margin: auto; }
+
+        .panel {
+            position: relative;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.03);
+            overflow: hidden;
+        }
+
+        .panel > * { position: relative; z-index: 2; }
+
+        .panel::before, .panel::after {
+            content: "";
+            position: absolute;
+            width: 145px;
+            height: 145px;
+            opacity: .35;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                repeating-radial-gradient(
+                    circle at center, transparent 0,
+                    transparent 17px, var(--red) 18px,
+                    transparent 19px
+                ),
+                repeating-conic-gradient(
+                    from 0deg, transparent 0deg,
+                    transparent 14deg, var(--red) 15deg,
+                    transparent 16deg
+                );
+        }
+
+        .panel::before { top: -60px; right: -60px; }
+        .panel::after { bottom: -60px; left: -60px; }
+
+        h1, h2 { margin-top: 0; }
+        h1 { margin-bottom: 8px; }
+        h2 { margin-bottom: 12px; }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 7px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 7px;
+            background: white;
+            color: #111827;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(220,38,38,.1);
+        }
+
+        select:disabled { background: #f3f4f6; cursor: wait; }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0,1fr));
+            gap: 16px;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .btn {
+            display: inline-block;
+            border: 1px solid var(--red);
+            border-radius: 7px;
+            padding: 11px 15px;
+            background: var(--red);
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .btn:hover { background: var(--dark-red); border-color: var(--dark-red); }
+
+        .btn.secondary {
+            background: white;
+            color: var(--black);
+            border-color: #d1d5db;
+        }
+
+        .btn.secondary:hover {
+            background: var(--light-red);
+            color: var(--dark-red);
+            border-color: #fca5a5;
+        }
+
+        .selected-class-box {
+            background: var(--very-light-red);
+            border: 1px solid #fecaca;
+            border-left: 4px solid var(--red);
+            border-radius: 8px;
+            padding: 15px 17px;
+            margin-top: 18px;
+        }
+
+        .selected-class-box p { margin: 5px 0; }
+        .selected-class-box strong { color: #991b1b; }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0,1fr));
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .summary div {
+            padding: 16px;
+            background: var(--very-light-red);
+            border: 1px solid #fee2e2;
+            border-radius: 8px;
+        }
+
+        .summary span { display: block; color: var(--muted); font-size: 13px; }
+        .summary strong { display: block; margin-top: 8px; font-size: 23px; }
+        .summary .present { color: var(--green); }
+        .summary .absent { color: var(--dark-red); }
+        .summary .unmarked { color: var(--yellow); }
+
+        .table-wrap { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 12px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        th { background: var(--light-red); color: #7f1d1d; font-weight: bold; }
+        tbody tr:hover { background: #fffafa; }
+
+        .status {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-present { background: var(--green-bg); color: var(--green); }
+        .status-absent { background: var(--light-red); color: var(--dark-red); }
+        .status-unmarked { background: var(--yellow-bg); color: var(--yellow); }
+
+        .empty { text-align: center; padding: 22px; color: var(--muted); }
+
+        .message {
+            padding: 14px 16px;
+            margin-top: 16px;
+            border-radius: 8px;
+            background: var(--very-light-red);
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        @media (max-width: 700px) {
+            body { padding: 12px; }
+            .filters, .summary { grid-template-columns: 1fr; }
+            .panel { padding: 16px; }
+            th, td { padding: 9px; font-size: 13px; }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="panel">
+        <h1>Date-Wise Attendance</h1>
+        <p style="color:#6b7280; margin-top:0;">
+            Select any date to view all classes scheduled on that date.
+        </p>
+
+        <div class="actions">
+            <a class="btn secondary" href="{{ url_for('dashboard') }}">
+                Back to Dashboard
+            </a>
+            <a class="btn secondary" href="{{ url_for('admin_timetable') }}">
+                Timetable
+            </a>
+        </div>
+    </div>
+
+    <!-- DATE AND CLASS FILTERS -->
+    <div class="panel">
+        <form method="GET"
+              action="{{ url_for('admin_attendance_history') }}"
+              id="attendanceFilterForm">
+
+            <div class="filters">
+                <div>
+                    <label for="date">Select Date</label>
+                    <input type="date"
+                           id="date"
+                           name="date"
+                           value="{{ selected_date }}"
+                           required>
+                </div>
+
+                <div>
+                    <label for="timetable_id">Select Class</label>
+
+                    <select id="timetable_id" name="timetable_id">
+                        <option value="">Select a class</option>
+
+                        {% for item in classes %}
+                        <option value="{{ item['id'] }}"
+                            {% if selected_timetable_id|string == item['id']|string %}
+                                selected
+                            {% endif %}>
+
+                            {% if item['subject_name'] %}
+                                {{ item['subject_name'] }}
+                            {% elif item['subject'] %}
+                                {{ item['subject'] }}
+                            {% elif item['course_code'] %}
+                                {{ item['course_code'] }}
+                            {% else %}
+                                Class
+                            {% endif %}
+
+                            {% if item['course_code'] %}
+                                — {{ item['course_code'] }}
+                            {% endif %}
+
+                            {% if item['start_time'] %}
+                                — {{ item['start_time']|time12 }}
+                            {% endif %}
+
+                            {% if item['end_time'] %}
+                                – {{ item['end_time']|time12 }}
+                            {% endif %}
+
+                            —
+
+                            {% if item['class_name'] %}
+                                {{ item['class_name'] }}
+                            {% elif item['class_section'] %}
+                                {{ item['class_section'] }}
+                            {% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- SELECTED CLASS INFORMATION -->
+            {% if selected_class %}
+            <div class="selected-class-box" id="selectedClassBox">
+                <p>
+                    <strong>Subject:</strong>
+                    {% if selected_class['subject_name'] %}
+                        {{ selected_class['subject_name'] }}
+                    {% elif selected_class['subject'] %}
+                        {{ selected_class['subject'] }}
+                    {% elif selected_class['course_code'] %}
+                        {{ selected_class['course_code'] }}
+                    {% else %}
+                        Class
+                    {% endif %}
+                </p>
+
+                <p>
+                    <strong>Course Code:</strong>
+                    {{ selected_class['course_code'] or '-' }}
+                </p>
+
+                <p>
+                    <strong>Faculty:</strong>
+                    {{ selected_class['faculty_name'] or selected_class['faculty'] or '-' }}
+                </p>
+
+                <p>
+                    <strong>Class / Section:</strong>
+                    {% set selected_section =
+                        selected_class['class_name']
+                        or selected_class['class_section']
+                        or selected_class['section']
+                        or '-'
+                    %}
+                    {% if selected_section == 'IV B.Tech ECE AI' %}
+                        IV B.Tech ECE A
+                    {% else %}
+                        {{ selected_section }}
+                    {% endif %}
+                </p>
+
+                <p>
+                    <strong>Time:</strong>
+                    {{ selected_class['start_time']|time12 if selected_class['start_time'] else '--' }}
+                    –
+                    {{ selected_class['end_time']|time12 if selected_class['end_time'] else '--' }}
+                </p>
+
+                <p>
+                    <strong>Room:</strong>
+                    {{ selected_class['room_no'] or selected_class['room'] or '-' }}
+                </p>
+
+                <p>
+                    <strong>Date:</strong>
+                    {{ display_date or selected_date }}
+                </p>
+            </div>
+            {% endif %}
+
+            <div class="actions">
+                <button class="btn" type="submit">View Attendance</button>
+            </div>
+        </form>
+
+        <div class="message" id="noClassesMessage"
+             {% if classes %}hidden{% endif %}>
+            No classes are scheduled on
+            <strong>{{ display_date or selected_date }}</strong>.
+        </div>
+    </div>
+
+    <!-- ATTENDANCE SUMMARY AND RECORDS -->
+    {% if selected_class %}
+    <div id="attendanceDetails">
+
+        <div class="panel">
+            <h2>Attendance Summary</h2>
+            <p>Attendance for the selected class and date.</p>
+
+            <div class="summary">
+                <div>
+                    <span>Total Students</span>
+                    <strong>{{ total_students|default(0) }}</strong>
+                </div>
+                <div>
+                    <span>Present</span>
+                    <strong class="present">{{ present_count|default(0) }}</strong>
+                </div>
+                <div>
+                    <span>Absent</span>
+                    <strong class="absent">{{ absent_count|default(0) }}</strong>
+                </div>
+                <div>
+                    <span>Unmarked</span>
+                    <strong class="unmarked">{{ unmarked_count|default(0) }}</strong>
+                </div>
+            </div>
+
+            <div class="actions">
+                <a id="downloadAttendanceButton"
+                   class="btn"
+                   href="{{ url_for(
+                       'admin_attendance_pdf',
+                       date=selected_date,
+                       timetable_id=selected_timetable_id
+                   ) }}">
+                    Download Attendance (PDF)
+                </a>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Attendance Records</h2>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Roll Number</th>
+                            <th>Student Name</th>
+                            <th>Subject</th>
+                            <th>Faculty</th>
+                            <th>Class / Section</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for record in attendance_records %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ record['roll_number'] or '-' }}</td>
+                            <td>{{ record['student_name'] or record['name'] or '-' }}</td>
+
+                            <td>
+                                {{ selected_class['subject_name']
+                                   or selected_class['subject']
+                                   or selected_class['course_code']
+                                   or '-' }}
+                            </td>
+
+                            <td>
+                                {{ selected_class['faculty_name']
+                                   or selected_class['faculty']
+                                   or '-' }}
+                            </td>
+
+                            <td>
+                                {% set record_section =
+                                    selected_class['class_name']
+                                    or selected_class['class_section']
+                                    or selected_class['section']
+                                    or '-'
+                                %}
+                                {% if record_section == 'IV B.Tech ECE AI' %}
+                                    IV B.Tech ECE A
+                                {% else %}
+                                    {{ record_section }}
+                                {% endif %}
+                            </td>
+
+                            <td>{{ display_date or selected_date }}</td>
+                            <td>{{ record['time'] or '--' }}</td>
+
+                            <td>
+                                {% set status =
+                                    (record['status'] or 'Unmarked')|lower|trim
+                                %}
+
+                                {% if status == 'present' or status == 'late' %}
+                                    <span class="status status-present">
+                                        {{ record['status'] or 'Present' }}
+                                    </span>
+                                {% elif status == 'absent' %}
+                                    <span class="status status-absent">Absent</span>
+                                {% else %}
+                                    <span class="status status-unmarked">
+                                        {{ record['status'] or 'Unmarked' }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="empty">
+                                No attendance records were found for
+                                <strong>{{ display_date or selected_date }}</strong>
+                                for the selected class.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const dateInput = document.getElementById("date");
+    const classSelect = document.getElementById("timetable_id");
+    const attendanceForm = document.getElementById("attendanceFilterForm");
+    const attendanceDetails = document.getElementById("attendanceDetails");
+    const selectedClassBox = document.getElementById("selectedClassBox");
+    const noClassesMessage = document.getElementById("noClassesMessage");
+
+    if (!dateInput || !classSelect) return;
+
+    let requestNumber = 0;
+
+    async function updateClassesForDate() {
+        const selectedDate = dateInput.value;
+        const thisRequest = ++requestNumber;
+
+        // Old class selection must be cleared immediately.
+        classSelect.innerHTML = "";
+        classSelect.add(new Option("Loading classes...", ""));
+        classSelect.value = "";
+        classSelect.disabled = true;
+
+        // Hide attendance belonging to the previously selected date/class.
+        if (attendanceDetails) attendanceDetails.hidden = true;
+        if (selectedClassBox) selectedClassBox.hidden = true;
+        if (noClassesMessage) noClassesMessage.hidden = true;
+
+        if (!selectedDate) {
+            classSelect.innerHTML = "";
+            classSelect.add(new Option("Select a date first", ""));
+            classSelect.disabled = false;
+            return;
+        }
+
+        try {
+            const url =
+                "{{ url_for('admin_attendance_classes') }}" +
+                "?date=" + encodeURIComponent(selectedDate);
+
+            const response = await fetch(url, {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+
+            if (!response.ok) {
+                throw new Error("Could not load classes. HTTP " + response.status);
+            }
+
+            const data = await response.json();
+
+            // Ignore an older response if the user has already picked another date.
+            if (thisRequest !== requestNumber) return;
+
+            classSelect.innerHTML = "";
+            classSelect.add(new Option("Select a class", ""));
+
+            const classes = Array.isArray(data.classes) ? data.classes : [];
+
+            classes.forEach(function (item) {
+                const subject = item.subject_name || item.subject || item.course_code || "Class";
+                const course = item.course_code ? " — " + item.course_code : "";
+                const start = item.start_time ? " — " + item.start_time : "";
+                const end = item.end_time ? " – " + item.end_time : "";
+                const section = item.class_name || item.class_section || item.section || "";
+
+                const option = new Option(
+                    subject + course + start + end + (section ? " — " + section : ""),
+                    item.id
+                );
+
+                classSelect.add(option);
+            });
+
+            // Keep "Select a class" selected; never auto-select the old class.
+            classSelect.value = "";
+
+            if (noClassesMessage) {
+                noClassesMessage.hidden = classes.length !== 0;
+                if (classes.length === 0) {
+                    noClassesMessage.textContent =
+                        "No classes are scheduled on " + selectedDate + ".";
+                }
+            }
+        } catch (error) {
+            if (thisRequest !== requestNumber) return;
+
+            console.error("Error loading classes:", error);
+            classSelect.innerHTML = "";
+            classSelect.add(new Option("Unable to load classes. Try again.", ""));
+        } finally {
+            if (thisRequest === requestNumber) {
+                classSelect.disabled = false;
+            }
+        }
+    }
+
+    // Changing the date updates only the dropdown; it does NOT reload the page.
+    dateInput.addEventListener("change", updateClassesForDate);
+
+    // If the date is changed and the class is selected, normal form submission
+    // happens only when the user clicks "View Attendance".
+    if (attendanceForm) {
+        attendanceForm.addEventListener("submit", function () {
+            classSelect.disabled = false;
+        });
+    }
+});
+</script>
+
+</body>
+</html>
