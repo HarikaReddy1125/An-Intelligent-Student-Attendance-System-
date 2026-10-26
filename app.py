@@ -3,6 +3,7 @@ import threading
 from werkzeug.security import check_password_hash, generate_password_hash
 from attendance_notifications import notify_today_absentees
 import inspect
+from database import create_tables
 from apscheduler.schedulers.background import BackgroundScheduler
 print(
     "notify_today_absentees loaded from:",
@@ -81,6 +82,7 @@ print(
 # ============================================================
 
 app = Flask(__name__)
+create_tables()
 app.register_blueprint(enroll_bp)
 app.config.update(
     MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
@@ -127,7 +129,7 @@ app.jinja_env.filters["time12"] = format_time_12h
 
 app.secret_key = "intelligent_attendance_system_secret_key"
 
-DATABASE_PATH = r"D:\student_attendance\attendance.db"
+DATABASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "attendance.db")
 
 ACADEMIC_START_DATE = "2026-07-01"
 
