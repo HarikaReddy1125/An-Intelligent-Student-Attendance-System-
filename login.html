@@ -189,6 +189,52 @@
                 font-size: 22px;
             }
         }
+
+        /* Subtle spider-web patterns: top-right and bottom-left */
+body {
+    position: relative;
+    isolation: isolate;
+}
+
+/* Shared styling for both webs */
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    width: 280px;
+    height: 280px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.16;
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+/* Top-right spider web */
+body::before {
+    top: 0;
+    right: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23c62828' stroke-width='1'%3E%3Cpath d='M200 0 L0 0 M200 0 L200 200 M200 0 L0 200 M200 0 L50 200 M200 0 L120 200 M200 0 L0 70 M200 0 L0 130 M200 0 L70 0 M200 0 L130 0'/%3E%3Cpath d='M170 0 Q170 30 200 30 M140 0 Q140 60 200 60 M110 0 Q110 90 200 90 M80 0 Q80 120 200 120 M50 0 Q50 150 200 150 M20 0 Q20 180 200 180'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+
+/* Bottom-left spider web — visible beside the sidebar */
+body::after {
+    content: "";
+    position: fixed;
+    width: 280px;
+    height: 280px;
+    bottom: 0;
+    left: 0;
+    transform: rotate(180deg);
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0.16;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23c62828' stroke-width='1'%3E%3Cpath d='M200 0 L0 0 M200 0 L200 200 M200 0 L0 200 M200 0 L50 200 M200 0 L120 200 M200 0 L0 70 M200 0 L0 130 M200 0 L70 0 M200 0 L130 0'/%3E%3Cpath d='M170 0 Q170 30 200 30 M140 0 Q140 60 200 60 M110 0 Q110 90 200 90 M80 0 Q80 120 200 120 M50 0 Q50 150 200 150 M20 0 Q20 180 200 180'/%3E%3C/g%3E%3C/svg%3E");
+}
+
     </style>
 </head>
 
