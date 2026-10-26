@@ -1,0 +1,2283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Today's Attendance</title>
+
+
+    <style>
+
+        :root {
+
+            --red: #dc2626;
+            --dark-red: #b91c1c;
+
+            --black: #111827;
+            --muted: #6b7280;
+
+            --border: #e5e7eb;
+
+            --background: #f5f6f8;
+
+            --white: #ffffff;
+
+            --green: #16a34a;
+            --green-bg: #dcfce7;
+
+            --orange: #ea580c;
+            --orange-bg: #ffedd5;
+
+            --gray-bg: #f3f4f6;
+
+            --blue: #2563eb;
+            --blue-dark: #1d4ed8;
+
+        }
+
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                var(--background);
+
+            color:
+                var(--black);
+
+            position:
+                relative;
+
+            isolation:
+                isolate;
+
+            min-height:
+                100vh;
+
+            overflow-x:
+                hidden;
+        }
+
+
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
+
+        header {
+
+            background:
+                var(--white);
+
+            border-bottom:
+                1px solid var(--border);
+
+            padding:
+                22px
+                max(
+                    20px,
+                    calc((100% - 1150px) / 2)
+                );
+
+            display:
+                flex;
+
+            justify-content:
+                space-between;
+
+            align-items:
+                center;
+
+            gap:
+                16px;
+        }
+
+
+        header h1 {
+
+            margin:
+                0;
+
+            font-size:
+                24px;
+        }
+
+
+        header p {
+
+            margin:
+                7px 0 0;
+
+            color:
+                var(--muted);
+
+            font-size:
+                14px;
+        }
+
+
+        .identity {
+
+            text-align:
+                right;
+
+            font-size:
+                14px;
+
+            color:
+                var(--muted);
+        }
+
+
+        .identity strong {
+
+            display:
+                block;
+
+            color:
+                var(--black);
+
+            margin-bottom:
+                5px;
+        }
+
+
+        /* =====================================================
+           NAVIGATION
+        ===================================================== */
+
+        nav {
+
+            background:
+                var(--white);
+
+            border-bottom:
+                1px solid var(--border);
+
+            padding:
+                10px
+                max(
+                    20px,
+                    calc((100% - 1150px) / 2)
+                );
+
+            display:
+                flex;
+
+            flex-wrap:
+                wrap;
+
+            gap:
+                8px;
+        }
+
+
+        nav a {
+
+            padding:
+                11px 14px;
+
+            border-radius:
+                7px;
+
+            text-decoration:
+                none;
+
+            color:
+                var(--black);
+
+            font-size:
+                14px;
+
+            transition:
+                background .15s ease,
+                color .15s ease;
+        }
+
+
+        nav a:hover,
+        nav a.active {
+
+            background:
+                #fee2e2;
+
+            color:
+                #991b1b;
+        }
+
+
+        nav .logout {
+
+            margin-left:
+                auto;
+
+            background:
+                var(--red);
+
+            color:
+                white;
+        }
+
+
+        nav .logout:hover {
+
+            background:
+                var(--dark-red);
+
+            color:
+                white;
+        }
+
+
+        /* =====================================================
+           MAIN
+        ===================================================== */
+
+        main {
+
+            max-width:
+                1350px;
+
+            margin:
+                28px auto;
+
+            padding:
+                0 20px;
+        }
+
+
+        /* =====================================================
+           ACTIONS
+        ===================================================== */
+
+        .actions {
+
+            display:
+                flex;
+
+            gap:
+                10px;
+
+            flex-wrap:
+                wrap;
+
+            margin-bottom:
+                20px;
+        }
+
+
+        .btn {
+
+            display:
+                inline-block;
+
+            background:
+                var(--red);
+
+            color:
+                white;
+
+            padding:
+                11px 15px;
+
+            border-radius:
+                7px;
+
+            text-decoration:
+                none;
+
+            font-weight:
+                bold;
+
+            font-size:
+                14px;
+
+            border:
+                1px solid transparent;
+
+            transition:
+                background .15s ease,
+                transform .1s ease;
+        }
+
+
+        .btn:hover {
+
+            background:
+                var(--dark-red);
+
+            color:
+                white;
+
+            transform:
+                translateY(-1px);
+        }
+
+
+        .btn.secondary {
+
+            background:
+                white;
+
+            color:
+                var(--black);
+
+            border:
+                1px solid var(--border);
+        }
+
+
+        .btn.secondary:hover {
+
+            background:
+                #f9fafb;
+
+            color:
+                var(--black);
+        }
+
+
+        .btn.pdf {
+
+            background:
+                #991b1b;
+        }
+
+
+        .btn.pdf:hover {
+
+            background:
+                #7f1d1d;
+        }
+
+
+        .btn.blue {
+
+            background:
+                var(--blue);
+        }
+
+
+        .btn.blue:hover {
+
+            background:
+                var(--blue-dark);
+        }
+
+
+        /* =====================================================
+           PANEL
+        ===================================================== */
+
+        .panel {
+
+            position:
+                relative;
+
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.97
+                );
+
+            border:
+                1px solid var(--border);
+
+            border-radius:
+                11px;
+
+            overflow:
+                hidden;
+
+            box-shadow:
+                0 2px 7px
+                rgba(
+                    0,
+                    0,
+                    0,
+                    .03
+                );
+
+            margin-bottom:
+                20px;
+        }
+
+
+        /* =====================================================
+           SPIDER WEB ON PANELS
+           ===================================================== */
+
+        .panel::before,
+        .panel::after {
+
+            content: "";
+
+            position:
+                absolute;
+
+            width:
+                145px;
+
+            height:
+                145px;
+
+            opacity:
+                0.500;
+
+            pointer-events:
+                none;
+
+            z-index:
+                0;
+
+            background:
+                repeating-radial-gradient(
+                    circle at center,
+                    transparent 0,
+                    transparent 17px,
+                    var(--red) 18px,
+                    transparent 19px
+                ),
+                repeating-conic-gradient(
+                    from 0deg,
+                    transparent 0deg,
+                    transparent 14deg,
+                    var(--red) 15deg,
+                    transparent 16deg
+                );
+        }
+
+
+        .panel::before {
+
+            top:
+                -60px;
+
+            right:
+                -60px;
+        }
+
+
+        .panel::after {
+
+            bottom:
+                -60px;
+
+            left:
+                -60px;
+        }
+
+
+        /*
+            Keep panel content above spider web.
+        */
+
+        .panel > * {
+
+            position:
+                relative;
+
+            z-index:
+                2;
+        }
+
+
+        /* =====================================================
+           CLASS SELECTOR
+        ===================================================== */
+
+        .class-selector {
+
+            padding:
+                22px;
+        }
+
+
+        .class-selector h2 {
+
+            margin:
+                0 0 7px;
+
+            font-size:
+                20px;
+        }
+
+
+        .class-selector p {
+
+            margin:
+                0 0 18px;
+
+            color:
+                var(--muted);
+
+            font-size:
+                14px;
+
+            line-height:
+                1.6;
+        }
+
+
+        .class-list {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(
+                        260px,
+                        1fr
+                    )
+                );
+
+            gap:
+                14px;
+        }
+
+
+        .class-option {
+
+            display:
+                block;
+
+            padding:
+                17px;
+
+            border:
+                1px solid var(--border);
+
+            border-radius:
+                9px;
+
+            background:
+                white;
+
+            text-decoration:
+                none;
+
+            color:
+                var(--black);
+
+            transition:
+                border-color .15s ease,
+                background .15s ease,
+                transform .15s ease,
+                box-shadow .15s ease;
+        }
+
+
+        .class-option:hover {
+
+            border-color:
+                #fca5a5;
+
+            background:
+                #fffafa;
+
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 4px 12px
+                rgba(
+                    0,
+                    0,
+                    0,
+                    .06
+                );
+        }
+
+
+        .class-option.selected {
+
+            border:
+                2px solid var(--red);
+
+            background:
+                #fff7f7;
+        }
+
+
+        .class-option-subject {
+
+            font-weight:
+                700;
+
+            font-size:
+                16px;
+
+            margin-bottom:
+                9px;
+        }
+
+
+        .class-option-details {
+
+            color:
+                var(--muted);
+
+            font-size:
+                13px;
+
+            line-height:
+                1.7;
+        }
+
+
+        /* =====================================================
+           PANEL HEADER
+        ===================================================== */
+
+        .panel-header {
+
+            padding:
+                20px 22px;
+
+            border-bottom:
+                1px solid var(--border);
+        }
+
+
+        .panel-header h2 {
+
+            margin:
+                0 0 7px;
+
+            font-size:
+                20px;
+        }
+
+
+        .panel-header p {
+
+            margin:
+                0;
+
+            color:
+                var(--muted);
+
+            font-size:
+                14px;
+        }
+
+
+        /* =====================================================
+           CLASS INFORMATION
+        ===================================================== */
+
+        .class-details {
+
+            padding:
+                22px;
+        }
+
+
+        .class-title {
+
+            margin:
+                0 0 20px;
+
+            font-size:
+                24px;
+
+            font-weight:
+                700;
+        }
+
+
+        .details-grid {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(
+                    2,
+                    minmax(
+                        0,
+                        1fr
+                    )
+                );
+
+            gap:
+                14px 25px;
+        }
+
+
+        .detail-item {
+
+            border:
+                1px solid var(--border);
+
+            background:
+                #fafafa;
+
+            border-radius:
+                8px;
+
+            padding:
+                14px 16px;
+        }
+
+
+        .detail-label {
+
+            display:
+                block;
+
+            color:
+                var(--muted);
+
+            font-size:
+                12px;
+
+            font-weight:
+                700;
+
+            text-transform:
+                uppercase;
+
+            letter-spacing:
+                .04em;
+
+            margin-bottom:
+                5px;
+        }
+
+
+        .detail-value {
+
+            display:
+                block;
+
+            color:
+                var(--black);
+
+            font-size:
+                15px;
+
+            font-weight:
+                600;
+        }
+
+
+        /* =====================================================
+           SUMMARY
+        ===================================================== */
+
+        .summary-grid {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(
+                    4,
+                    minmax(
+                        0,
+                        1fr
+                    )
+                );
+
+            gap:
+                14px;
+
+            padding:
+                22px;
+        }
+
+
+        .summary-card {
+
+            border:
+                1px solid var(--border);
+
+            border-radius:
+                10px;
+
+            padding:
+                18px;
+
+            background:
+                white;
+        }
+
+
+        .summary-label {
+
+            color:
+                var(--muted);
+
+            font-size:
+                13px;
+
+            font-weight:
+                600;
+
+            margin-bottom:
+                8px;
+        }
+
+
+        .summary-value {
+
+            font-size:
+                28px;
+
+            font-weight:
+                700;
+
+            line-height:
+                1;
+        }
+
+
+        .summary-card.total .summary-value {
+
+            color:
+                var(--black);
+        }
+
+
+        .summary-card.present {
+
+            border-color:
+                #bbf7d0;
+
+            background:
+                #f0fdf4;
+        }
+
+
+        .summary-card.present
+        .summary-value {
+
+            color:
+                var(--green);
+        }
+
+
+        .summary-card.absent {
+
+            border-color:
+                #fecaca;
+
+            background:
+                #fef2f2;
+        }
+
+
+        .summary-card.absent
+        .summary-value {
+
+            color:
+                var(--red);
+        }
+
+
+        .summary-card.unmarked {
+
+            border-color:
+                #fed7aa;
+
+            background:
+                #fff7ed;
+        }
+
+
+        .summary-card.unmarked
+        .summary-value {
+
+            color:
+                var(--orange);
+        }
+
+
+        /* =====================================================
+           TABLE
+        ===================================================== */
+
+        .table-wrap {
+
+            overflow-x:
+                auto;
+        }
+
+
+        table {
+
+            width:
+                100%;
+
+            border-collapse:
+                collapse;
+
+            min-width:
+                1050px;
+        }
+
+
+        th,
+        td {
+
+            padding:
+                13px 14px;
+
+            text-align:
+                left;
+
+            border-bottom:
+                1px solid var(--border);
+
+            font-size:
+                13px;
+
+            vertical-align:
+                middle;
+        }
+
+
+        th {
+
+            background:
+                #f9fafb;
+
+            color:
+                #4b5563;
+
+            text-transform:
+                uppercase;
+
+            font-size:
+                11px;
+
+            letter-spacing:
+                .04em;
+
+            white-space:
+                nowrap;
+        }
+
+
+        tbody tr:hover {
+
+            background:
+                #fffafa;
+        }
+
+
+        tbody tr:last-child td {
+
+            border-bottom:
+                none;
+        }
+
+
+        /* =====================================================
+           STATUS
+        ===================================================== */
+
+        .status {
+
+            display:
+                inline-block;
+
+            min-width:
+                70px;
+
+            text-align:
+                center;
+
+            padding:
+                5px 9px;
+
+            border-radius:
+                999px;
+
+            font-size:
+                11px;
+
+            font-weight:
+                700;
+
+            text-transform:
+                capitalize;
+        }
+
+
+        .status-present {
+
+            color:
+                #166534;
+
+            background:
+                var(--green-bg);
+        }
+
+
+        .status-late {
+
+            color:
+                #9a3412;
+
+            background:
+                var(--orange-bg);
+        }
+
+
+        .status-absent {
+
+            color:
+                #991b1b;
+
+            background:
+                #fee2e2;
+        }
+
+
+        .status-unmarked {
+
+            color:
+                #854d0e;
+
+            background:
+                #fef3c7;
+        }
+
+
+        .empty {
+
+            text-align:
+                center;
+
+            color:
+                var(--muted);
+
+            padding:
+                35px;
+        }
+
+
+        /* =====================================================
+           INFO MESSAGE
+        ===================================================== */
+
+        .info-message {
+
+            margin:
+                22px;
+
+            padding:
+                15px 17px;
+
+            background:
+                #eff6ff;
+
+            border:
+                1px solid #bfdbfe;
+
+            border-radius:
+                8px;
+
+            color:
+                #1e40af;
+
+            font-size:
+                14px;
+
+            line-height:
+                1.6;
+        }
+
+
+        /* =====================================================
+           FOOTER
+        ===================================================== */
+
+        footer {
+
+            text-align:
+                center;
+
+            padding:
+                25px;
+
+            color:
+                var(--muted);
+
+            font-size:
+                12px;
+        }
+
+
+        /* =====================================================
+           RESPONSIVE
+        ===================================================== */
+
+        @media (max-width: 850px) {
+
+            .summary-grid {
+
+                grid-template-columns:
+                    repeat(
+                        2,
+                        minmax(
+                            0,
+                            1fr
+                        )
+                    );
+            }
+
+
+            .details-grid {
+
+                grid-template-columns:
+                    1fr;
+            }
+
+        }
+
+
+        @media (max-width: 650px) {
+
+            header {
+
+                align-items:
+                    flex-start;
+
+                flex-direction:
+                    column;
+            }
+
+
+            .identity {
+
+                text-align:
+                    left;
+            }
+
+
+            nav .logout {
+
+                margin-left:
+                    0;
+            }
+
+
+            main {
+
+                margin-top:
+                    18px;
+
+                padding-left:
+                    12px;
+
+                padding-right:
+                    12px;
+            }
+
+
+            .summary-grid {
+
+                grid-template-columns:
+                    1fr;
+
+                padding:
+                    16px;
+            }
+
+
+            .class-details {
+
+                padding:
+                    16px;
+            }
+
+
+            .panel-header {
+
+                padding:
+                    17px;
+            }
+
+
+            .class-title {
+
+                font-size:
+                    20px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     HEADER
+========================================================= -->
+
+<header>
+
+    <div>
+
+        <h1>
+            Today's Attendance
+        </h1>
+
+        <p>
+            {{
+                faculty["name"]
+                if faculty
+                and faculty["name"]
+                else
+                faculty_name
+                if faculty_name
+                else
+                session.get(
+                    "username",
+                    "Faculty"
+                )
+            }}
+        </p>
+
+    </div>
+
+
+    <div class="identity">
+
+        <strong>
+
+            {{
+                faculty["name"]
+                if faculty
+                and faculty["name"]
+                else
+                faculty_name
+                if faculty_name
+                else
+                session.get(
+                    "username",
+                    "Faculty"
+                )
+            }}
+
+        </strong>
+
+        <span>
+            Faculty
+        </span>
+
+    </div>
+
+</header>
+
+
+<!-- =========================================================
+     NAVIGATION
+========================================================= -->
+
+<nav>
+
+    <a
+        href="{{ url_for('faculty_dashboard') }}"
+    >
+        Dashboard
+    </a>
+
+
+    <a
+        href="{{ url_for('faculty_timetable') }}"
+    >
+        My Timetable
+    </a>
+
+
+    <a
+        class="active"
+        href="{{ url_for(
+            'faculty_today_attendance_page'
+        ) }}"
+    >
+        Today's Attendance
+    </a>
+
+
+    <a
+        href="{{ url_for('faculty_attendance') }}"
+    >
+        Attendance
+    </a>
+
+
+    <a
+        class="logout"
+        href="{{ url_for('logout') }}"
+    >
+        Logout
+    </a>
+
+</nav>
+
+
+<!-- =========================================================
+     MAIN
+========================================================= -->
+
+<main>
+
+
+    <!-- =====================================================
+         ACTION BUTTONS
+    ====================================================== -->
+
+    <div class="actions">
+
+
+        <a
+            class="btn secondary"
+            href="{{ url_for(
+                'faculty_dashboard'
+            ) }}"
+        >
+            ← Back to Dashboard
+        </a>
+
+
+        <a
+            class="btn secondary"
+            href="{{ url_for(
+                'faculty_timetable'
+            ) }}"
+        >
+            My Timetable
+        </a>
+
+
+        {% if selected_class %}
+
+            <a
+                class="btn pdf"
+                href="{{ url_for(
+                    'faculty_today_attendance_pdf',
+                    timetable_id=selected_class['id'],
+                    date=today_date
+                ) }}"
+            >
+                Download Attendance (PDF)
+            </a>
+
+        {% endif %}
+
+
+    </div>
+
+
+    <!-- =====================================================
+         TODAY'S CLASSES
+    ====================================================== -->
+
+    {% if today_classes|length > 1 %}
+
+    <section class="panel">
+
+
+        <div class="panel-header">
+
+            <h2>
+                Select Today's Class
+            </h2>
+
+            <p>
+                You have
+                {{ today_classes|length }}
+                classes scheduled today.
+                Select a class to view its attendance.
+            </p>
+
+        </div>
+
+
+        <div class="class-selector">
+
+
+            <div class="class-list">
+
+
+                {% for item in today_classes %}
+
+                    <a
+                        class="
+                            class-option
+                            {% if selected_class
+                                and
+                                selected_class['id']
+                                == item['id']
+                            %}
+                                selected
+                            {% endif %}
+                        "
+                        href="{{ url_for(
+                            'faculty_today_attendance_page',
+                            timetable_id=item['id']
+                        ) }}"
+                    >
+
+
+                        <div
+                            class="class-option-subject"
+                        >
+                            {{ item["subject_name"] }}
+                        </div>
+
+
+                        <div
+                            class="class-option-details"
+                        >
+
+                            <div>
+
+                                <b>
+                                    Time:
+                                </b>
+
+                                {{
+                                    item["start_time"]
+                                    |default("")
+                                    |time12
+                                }}
+
+                                –
+
+                                {{
+                                    item["end_time"]
+                                    |default("")
+                                    |time12
+                                }}
+
+                            </div>
+
+
+                            <div>
+
+                                <b>
+                                    Room:
+                                </b>
+
+                                {{ item["room_no"] }}
+
+                            </div>
+
+
+                            <div>
+
+                                <b>
+                                    Course:
+                                </b>
+
+                                {{ item["course_code"] }}
+
+                            </div>
+
+
+                            <div>
+
+                                <b>
+                                    Class:
+                                </b>
+
+                                {{ item["class_section"] }}
+
+                            </div>
+
+                        </div>
+
+
+                    </a>
+
+                {% endfor %}
+
+
+            </div>
+
+
+        </div>
+
+    </section>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         NO CLASS
+    ====================================================== -->
+
+    {% if not today_classes %}
+
+        <section class="panel">
+
+            <div class="info-message">
+
+                No class is scheduled for you today.
+
+            </div>
+
+        </section>
+
+
+    {% elif not selected_class %}
+
+        <!-- =================================================
+             MULTIPLE CLASSES BUT NONE SELECTED
+        ================================================= -->
+
+        <section class="panel">
+
+            <div class="info-message">
+
+                Please select one of today's classes above
+                to view its attendance records.
+
+            </div>
+
+        </section>
+
+
+    {% else %}
+
+
+        <!-- =================================================
+             SELECTED CLASS
+        ================================================= -->
+
+        <section class="panel">
+
+
+            <div class="panel-header">
+
+                <h2>
+                    Today's Attendance
+                </h2>
+
+
+                <p>
+
+                    Attendance for the selected class
+                    on {{ today_date }}.
+
+                </p>
+
+            </div>
+
+
+            <div class="class-details">
+
+
+                <h2 class="class-title">
+
+                    {{ subject }}
+
+                </h2>
+
+
+                <div class="details-grid">
+
+
+                    <div class="detail-item">
+
+                        <span class="detail-label">
+                            Subject
+                        </span>
+
+                        <span class="detail-value">
+                            {{ subject }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="detail-item">
+
+                        <span class="detail-label">
+                            Course Code
+                        </span>
+
+                        <span class="detail-value">
+                            {{ course_code }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="detail-item">
+
+                        <span class="detail-label">
+                            Faculty
+                        </span>
+
+                        <span class="detail-value">
+                            {{ faculty_display }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="detail-item">
+
+                        <span class="detail-label">
+                            Class / Section
+                        </span>
+
+                        <span class="detail-value">
+                            {{ class_section }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="detail-item">
+
+                        <span class="detail-label">
+                            Time
+                        </span>
+
+                        <span class="detail-value">
+
+                            {{
+                                start_time
+                                |time12
+                            }}
+
+                            –
+
+                            {{
+                                end_time
+                                |time12
+                            }}
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="detail-item">
+
+                        <span class="detail-label">
+                            Room
+                        </span>
+
+                        <span class="detail-value">
+                            {{ room }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="detail-item">
+
+                        <span class="detail-label">
+                            Date
+                        </span>
+
+                        <span class="detail-value">
+                            {{ today_date }}
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             ATTENDANCE SUMMARY
+        ================================================== -->
+
+        <section class="panel">
+
+
+            <div class="panel-header">
+
+                <h2>
+                    Attendance Summary
+                </h2>
+
+                <p>
+                    Attendance for this class today.
+                </p>
+
+            </div>
+
+
+            <div class="summary-grid">
+
+
+                <div class="summary-card total">
+
+                    <div class="summary-label">
+                        Total Students
+                    </div>
+
+                    <div class="summary-value">
+                        {{ total_students }}
+                    </div>
+
+                </div>
+
+
+                <div class="summary-card present">
+
+                    <div class="summary-label">
+                        Present
+                    </div>
+
+                    <div class="summary-value">
+                        {{ present_count }}
+                    </div>
+
+                </div>
+
+
+                <div class="summary-card absent">
+
+                    <div class="summary-label">
+                        Absent
+                    </div>
+
+                    <div class="summary-value">
+                        {{ absent_count }}
+                    </div>
+
+                </div>
+
+
+                <div class="summary-card unmarked">
+
+                    <div class="summary-label">
+                        Unmarked
+                    </div>
+
+                    <div class="summary-value">
+                        {{ unmarked_count }}
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             OTHER TODAY'S CLASSES
+        ================================================== -->
+
+        {% if today_classes|length > 1 %}
+
+        <section class="panel">
+
+
+            <div class="panel-header">
+
+                <h2>
+                    View Other Today's Class
+                </h2>
+
+
+                <p>
+                    Select another class to view
+                    its attendance.
+                </p>
+
+            </div>
+
+
+            <div class="class-selector">
+
+
+                <div class="class-list">
+
+
+                    {% for item in today_classes %}
+
+                        {% if item["id"] != selected_class["id"] %}
+
+                        <a
+                            class="class-option"
+                            href="{{ url_for(
+                                'faculty_today_attendance_page',
+                                timetable_id=item['id']
+                            ) }}"
+                        >
+
+
+                            <div
+                                class="class-option-subject"
+                            >
+
+                                {{ item["subject_name"] }}
+
+                            </div>
+
+
+                            <div
+                                class="class-option-details"
+                            >
+
+                                <div>
+
+                                    <b>
+                                        Time:
+                                    </b>
+
+                                    {{
+                                        item["start_time"]
+                                        |default("")
+                                        |time12
+                                    }}
+
+                                    –
+
+                                    {{
+                                        item["end_time"]
+                                        |default("")
+                                        |time12
+                                    }}
+
+                                </div>
+
+
+                                <div>
+
+                                    <b>
+                                        Room:
+                                    </b>
+
+                                    {{ item["room_no"] }}
+
+                                </div>
+
+
+                                <div>
+
+                                    <b>
+                                        Course:
+                                    </b>
+
+                                    {{ item["course_code"] }}
+
+                                </div>
+
+
+                                <div>
+
+                                    <b>
+                                        Class:
+                                    </b>
+
+                                    {{ item["class_section"] }}
+
+                                </div>
+
+
+                            </div>
+
+
+                            <div
+                                style="
+                                    margin-top:12px;
+                                "
+                            >
+
+                                <span
+                                    class="btn blue"
+                                >
+                                    View Attendance
+                                </span>
+
+                            </div>
+
+
+                        </a>
+
+                        {% endif %}
+
+                    {% endfor %}
+
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             ATTENDANCE RECORDS
+        ================================================== -->
+
+        <section class="panel">
+
+
+            <div class="panel-header">
+
+                <h2>
+                    Attendance Records
+                </h2>
+
+
+                <p>
+
+                    Student attendance for
+                    {{ today_date }}.
+
+                </p>
+
+            </div>
+
+
+            {% if attendance_records %}
+
+
+                <div class="table-wrap">
+
+
+                    <table>
+
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    No.
+                                </th>
+
+                                <th>
+                                    Roll Number
+                                </th>
+
+                                <th>
+                                    Student Name
+                                </th>
+
+                                <th>
+                                    Subject
+                                </th>
+
+                                <th>
+                                    Faculty
+                                </th>
+
+                                <th>
+                                    Class / Section
+                                </th>
+
+                                <th>
+                                    Date
+                                </th>
+
+                                <th>
+                                    Time
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+
+                            {% for record
+                               in attendance_records %}
+
+
+                                {% set current_status =
+                                    (
+                                        record.get("status")
+                                        or "Unmarked"
+                                    )|trim
+                                %}
+
+
+                                {% set status_lower =
+                                    current_status.lower()
+                                %}
+
+
+                                <tr>
+
+
+                                    <td>
+
+                                        {{
+                                            record.get(
+                                                "no",
+                                                loop.index
+                                            )
+                                        }}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        {{
+                                            record.get(
+                                                "roll_number"
+                                            )
+                                            or
+                                            record.get(
+                                                "student_roll"
+                                            )
+                                            or
+                                            record.get(
+                                                "student_id"
+                                            )
+                                            or
+                                            "-"
+                                        }}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        {{
+                                            record.get(
+                                                "student_name"
+                                            )
+                                            or
+                                            "Student"
+                                        }}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        {{
+                                            record.get(
+                                                "subject"
+                                            )
+                                            or
+                                            subject
+                                            or
+                                            "-"
+                                        }}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        {{
+                                            record.get(
+                                                "faculty"
+                                            )
+                                            or
+                                            faculty_display
+                                            or
+                                            "-"
+                                        }}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        {{
+                                            record.get(
+                                                "class_section"
+                                            )
+                                            or
+                                            class_section
+                                            or
+                                            "-"
+                                        }}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        {{
+                                            record.get(
+                                                "date"
+                                            )
+                                            or
+                                            today_date
+                                        }}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        {{
+                                            record.get(
+                                                "time"
+                                            )
+                                            or
+                                            "--"
+                                        }}
+
+                                    </td>
+
+
+                                    <td>
+
+
+                                        {% if status_lower
+                                              == "present" %}
+
+                                            <span
+                                                class="
+                                                    status
+                                                    status-present
+                                                "
+                                            >
+                                                Present
+                                            </span>
+
+
+                                        {% elif status_lower
+                                              == "late" %}
+
+                                            <span
+                                                class="
+                                                    status
+                                                    status-late
+                                                "
+                                            >
+                                                Late
+                                            </span>
+
+
+                                        {% elif status_lower
+                                              == "absent" %}
+
+                                            <span
+                                                class="
+                                                    status
+                                                    status-absent
+                                                "
+                                            >
+                                                Absent
+                                            </span>
+
+
+                                        {% else %}
+
+                                            <span
+                                                class="
+                                                    status
+                                                    status-unmarked
+                                                "
+                                            >
+                                                Unmarked
+                                            </span>
+
+                                        {% endif %}
+
+
+                                    </td>
+
+
+                                </tr>
+
+
+                            {% endfor %}
+
+
+                        </tbody>
+
+
+                    </table>
+
+
+                </div>
+
+
+            {% else %}
+
+
+                <div class="empty">
+
+                    No attendance records found
+                    for this class today.
+
+                </div>
+
+
+            {% endif %}
+
+
+        </section>
+
+
+    {% endif %}
+
+
+</main>
+
+
+<!-- =========================================================
+     FOOTER
+========================================================= -->
+
+<footer>
+
+    Intelligent Student Attendance System
+
+</footer>
+
+
+</body>
+
+</html>

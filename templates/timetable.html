@@ -1,0 +1,912 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Timetable</title>
+
+    <style>
+        :root {
+            --red: #c62828;
+            --red-dark: #a51d1d;
+            --red-light: #fff1f1;
+            --button-light-red: #ffdada;
+            --border: #dedede;
+            --text: #111;
+            --muted: #666;
+            --white: #fff;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            position: relative;
+            margin: 0;
+            padding: 24px;
+            overflow-x: hidden;
+            background: var(--white);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        /* Larger spider-web corner decorations */
+        .spider-web {
+            position: fixed;
+            width: 340px;
+            height: 340px;
+            color: var(--red);
+            opacity: 0.25;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .spider-web-top-right {
+            top: 0;
+            right: 0;
+        }
+
+        .spider-web-bottom-left {
+            bottom: 0;
+            left: 0;
+            transform: rotate(180deg);
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+
+        /* Keep the dashboard button on the right, but away from the corner */
+.top-actions {
+    display: flex;
+    justify-content: flex-start;
+    padding: 0;
+    margin: 0 0 22px 0;
+    position: relative;
+    top: -0px;
+    left: -0px;
+    z-index: 2;
+}
+
+.back-link {
+    display: inline-block;
+    padding: 10px 15px;
+    border: 2px solid var(--red);
+    border-radius: 0 0 7px 0;
+    background: var(--white);
+    color: var(--red);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.back-link:hover {
+    background: var(--red);
+    color: var(--white);
+}
+
+@media (max-width: 600px) {
+    .top-actions {
+        padding-left: 45px;
+    }
+}
+
+        .back-link {
+            display: inline-block;
+            padding: 10px 15px;
+            border: 2px solid var(--red);
+            border-radius: 7px;
+            background: var(--white);
+            color: var(--red);
+            text-decoration: none;
+            font-weight: bold;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .back-link:hover {
+            background: var(--red);
+            color: var(--white);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+
+        h2 {
+            margin: 0 0 18px;
+            font-size: 20px;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .panel {
+            margin: 22px 0;
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--white);
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .field {
+            min-width: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        input,
+        select {
+            width: 100%;
+            min-height: 42px;
+            padding: 9px 11px;
+            border: 2px solid var(--red);
+            border-radius: 7px;
+            background: var(--white);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        input:focus,
+        select:focus,
+        button:focus {
+            outline: 2px solid var(--red);
+            outline-offset: 2px;
+        }
+
+        button {
+            min-height: 38px;
+            padding: 8px 13px;
+            border: 2px solid var(--red);
+            border-radius: 7px;
+            background: var(--red);
+            color: var(--white);
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease,
+                        border-color 0.2s ease;
+        }
+
+        button:hover {
+            border-color: var(--red-dark);
+            background: var(--red-dark);
+            color: var(--white);
+        }
+
+        /* Edit and Remove: light red normally */
+        .edit-button,
+        .button-remove {
+            background: var(--button-light-red);
+            border-color: var(--red);
+            color: var(--red-dark);
+        }
+
+        /* Edit and Remove: dark red on hover */
+        .edit-button:hover,
+        .button-remove:hover {
+            background: var(--red);
+            border-color: var(--red-dark);
+            color: var(--white);
+        }
+
+        .button-secondary {
+            background: var(--white);
+            color: var(--red);
+        }
+
+        .button-secondary:hover {
+            background: var(--red-light);
+            color: var(--red-dark);
+        }
+
+        .form-actions,
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .actions {
+            margin-top: 0;
+        }
+
+        .inline-form {
+            display: inline;
+            margin: 0;
+        }
+
+        .filters {
+            display: flex;
+            align-items: end;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .filter-field {
+            width: 220px;
+            max-width: 100%;
+        }
+
+        .count {
+            margin: 12px 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .day-section {
+            margin: 20px 0;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--white);
+        }
+
+        .day-heading {
+            margin: 0;
+            padding: 14px 16px;
+            border-bottom: 2px solid var(--red);
+            background: var(--red-light);
+            font-size: 18px;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            min-width: 950px;
+            border-collapse: collapse;
+            background: var(--white);
+            font-size: 13px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            border-bottom: 2px solid var(--red);
+            white-space: nowrap;
+        }
+
+        tbody tr:hover {
+            background: #fffafa;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 9px;
+            border: 1px solid #238636;
+            border-radius: 20px;
+            background: #f0fff3;
+            color: #176329;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .empty-state {
+            padding: 28px 12px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .flash-messages {
+            margin: 18px 0;
+        }
+
+        .flash {
+            margin-bottom: 8px;
+            padding: 12px;
+            border: 1px solid var(--red);
+            border-radius: 7px;
+            background: var(--red-light);
+            color: var(--text);
+        }
+
+        .hidden,
+        [hidden] {
+            display: none !important;
+        }
+
+        @media (max-width: 800px) {
+            body {
+                padding: 12px;
+            }
+
+            .panel {
+                padding: 14px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 23px;
+            }
+
+            .filter-field {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .spider-web {
+                width: 210px;
+                height: 210px;
+                opacity: 0.18;
+            }
+
+            .top-actions {
+                padding-right: 45px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Spider web: top-right -->
+<svg class="spider-web spider-web-top-right"
+     viewBox="0 0 200 200"
+     aria-hidden="true">
+    <g fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M200 0 L0 0
+                 M200 0 L200 200
+                 M200 0 L0 100
+                 M200 0 L100 200
+                 M200 0 L50 200
+                 M200 0 L150 200"/>
+        <path d="M180 0 Q180 20 200 20
+                 M155 0 Q155 45 200 45
+                 M125 0 Q125 70 200 70
+                 M95 0 Q95 95 200 95
+                 M65 0 Q65 125 200 125
+                 M35 0 Q35 160 200 160"/>
+    </g>
+</svg>
+
+<!-- Spider web: bottom-left -->
+<svg class="spider-web spider-web-bottom-left"
+     viewBox="0 0 200 200"
+     aria-hidden="true">
+    <g fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M200 0 L0 0
+                 M200 0 L200 200
+                 M200 0 L0 100
+                 M200 0 L100 200
+                 M200 0 L50 200
+                 M200 0 L150 200"/>
+        <path d="M180 0 Q180 20 200 20
+                 M155 0 Q155 45 200 45
+                 M125 0 Q125 70 200 70
+                 M95 0 Q95 95 200 95
+                 M65 0 Q65 125 200 125
+                 M35 0 Q35 160 200 160"/>
+    </g>
+</svg>
+
+<div class="page">
+
+    <div class="top-actions">
+        <a class="back-link" href="{{ url_for('dashboard') }}">
+            ← Back to Dashboard
+        </a>
+    </div>
+
+    <header>
+        <h1>Scheduled Classes</h1>
+        <p class="subtitle">Manage the active timetable.</p>
+    </header>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Conflict confirmation -->
+    {% if timetable_conflict and conflict_entry and pending_form %}
+        <section class="panel" style="border:2px solid #c62828;">
+            <h2>Class Already Exists / Time Conflict</h2>
+            <p>{{ timetable_conflict }}</p>
+
+            <p>
+                Existing class:
+                <strong>
+                    {{ conflict_entry['subject_name'] or conflict_entry['subject'] }}
+                </strong>
+                — {{ conflict_entry['day'] }},
+                {{ conflict_entry['start_time'] }}–{{ conflict_entry['end_time'] }},
+                {{ conflict_entry['class_name'] }}
+            </p>
+
+            <p>Do you want to replace this existing timetable entry?</p>
+
+            <form method="POST"
+                  action="{{ url_for('replace_timetable_entry', entry_id=conflict_entry['id']) }}"
+                  style="display:inline;">
+                {% for key, value in pending_form.items() %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endfor %}
+                <button type="submit">Replace</button>
+            </form>
+
+            <a class="back-link" href="{{ url_for('admin_timetable') }}">
+                Cancel
+            </a>
+        </section>
+    {% endif %}
+
+    <!-- Add Class -->
+    <section class="panel">
+        <h2>Add Class</h2>
+
+        <form method="POST" action="{{ url_for('add_timetable_entry') }}">
+            <div class="form-grid">
+
+                <div class="field">
+                    <label for="day">Day</label>
+                    <select id="day" name="day" required>
+                        <option value="">Select day</option>
+                        {% for day in [
+                            'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+                            'Friday', 'Saturday', 'Sunday'
+                        ] %}
+                            <option value="{{ day }}"
+                                {% if pending_form and pending_form.get('day') == day %}selected{% endif %}>
+                                {{ day }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="start_time">Start Time</label>
+                    <input id="start_time" name="start_time" type="time"
+                           value="{{ pending_form.get('start_time', '') if pending_form else '' }}"
+                           required>
+                </div>
+
+                <div class="field">
+                    <label for="end_time">End Time</label>
+                    <input id="end_time" name="end_time" type="time"
+                           value="{{ pending_form.get('end_time', '') if pending_form else '' }}"
+                           required>
+                </div>
+
+                <div class="field">
+                    <label for="course_code">Course Code</label>
+                    <input id="course_code" name="course_code"
+                           value="{{ pending_form.get('course_code', '') if pending_form else '' }}">
+                </div>
+
+                <div class="field">
+                    <label for="subject_name">Subject</label>
+                    <input id="subject_name" name="subject_name"
+                           value="{{ pending_form.get('subject_name', '') if pending_form else '' }}"
+                           required>
+                </div>
+
+                <div class="field">
+                    <label for="faculty_name">Faculty</label>
+                    <input id="faculty_name" name="faculty_name"
+                           value="{{ pending_form.get('faculty_name', '') if pending_form else '' }}">
+                </div>
+
+                <div class="field">
+                    <label for="room_no">Room</label>
+                    <input id="room_no" name="room_no"
+                           value="{{ pending_form.get('room_no', '') if pending_form else '' }}">
+                </div>
+
+                <div class="field">
+                    <label for="class_name">Class / Section</label>
+                    <input id="class_name" name="class_name"
+                           value="{{ pending_form.get('class_name', 'IV B.Tech ECE A') if pending_form else 'IV B.Tech ECE A' }}"
+                           required>
+                </div>
+
+                <input type="hidden" name="department" value="ECE">
+                <input type="hidden" name="year" value="IV">
+                <input type="hidden" name="section" value="A">
+
+            </div>
+
+            <div class="form-actions">
+                <button type="submit">Add Class</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Active Timetable -->
+    <section class="panel">
+        <h2>Active Timetable</h2>
+
+        <div class="filters">
+            <div class="filter-field">
+                <label for="dayFilter">Filter by day</label>
+                <select id="dayFilter">
+                    <option value="">All days</option>
+                    <option value="monday">Monday</option>
+                    <option value="tuesday">Tuesday</option>
+                    <option value="wednesday">Wednesday</option>
+                    <option value="thursday">Thursday</option>
+                    <option value="friday">Friday</option>
+                    <option value="saturday">Saturday</option>
+                    <option value="sunday">Sunday</option>
+                </select>
+            </div>
+
+            <button type="button" id="clearFilters" class="button-secondary">
+                Clear Filters
+            </button>
+        </div>
+
+        {% set day_order = [
+            ('Monday', 'monday', ['monday', 'mon']),
+            ('Tuesday', 'tuesday', ['tuesday', 'tue', 'tues']),
+            ('Wednesday', 'wednesday', ['wednesday', 'wed']),
+            ('Thursday', 'thursday', ['thursday', 'thu', 'thur', 'thurs']),
+            ('Friday', 'friday', ['friday', 'fri']),
+            ('Saturday', 'saturday', ['saturday', 'sat']),
+            ('Sunday', 'sunday', ['sunday', 'sun'])
+        ] %}
+
+        {% set totals = namespace(count=0) %}
+
+        {% for day_name, day_key, aliases in day_order %}
+            {% set collected = namespace(items=[]) %}
+
+            {% for item in timetable %}
+                {% set stored_day = (item['day'] or '')|lower|trim %}
+                {% set active_value = item['active']|default(1, true)|int %}
+
+                {% if stored_day in aliases and active_value == 1 %}
+                    {% set collected.items = collected.items + [item] %}
+                {% endif %}
+            {% endfor %}
+
+            {% if collected.items %}
+                <section class="day-section" data-day="{{ day_key }}">
+                    <h3 class="day-heading">{{ day_name }}</h3>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>S.No.</th>
+                                    <th>Time</th>
+                                    <th>Course Code</th>
+                                    <th>Subject</th>
+                                    <th>Faculty</th>
+                                    <th>Room</th>
+                                    <th>Class / Section</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for item in collected.items|sort(attribute='start_time') %}
+                                    {% set totals.count = totals.count + 1 %}
+
+                                    <tr class="timetable-row">
+                                        <td>{{ loop.index }}</td>
+
+                                        <td class="time-cell"
+                                            data-start="{{ item['start_time'] or '' }}"
+                                            data-end="{{ item['end_time'] or '' }}">
+                                            {{ item['start_time'] or '-' }} – {{ item['end_time'] or '-' }}
+                                        </td>
+
+                                        <td>{{ item['course_code']|default('', true) or '-' }}</td>
+
+                                        <td>
+                                            {{ item['subject_name']|default('', true)
+                                               or item['subject']|default('', true)
+                                               or '-' }}
+                                        </td>
+
+                                        <td>
+                                            {{ item['faculty_name']|default('', true)
+                                               or item['faculty']|default('', true)
+                                               or '-' }}
+                                        </td>
+
+                                        <td>
+                                            {{ item['room_no']|default('', true)
+                                               or item['room']|default('', true)
+                                               or '-' }}
+                                        </td>
+
+                                        <td>IV B.Tech ECE A</td>
+
+                                        <td><span class="status">Active</span></td>
+
+                                        <td>
+                                            <div class="actions">
+                                                <button
+                                                    type="button"
+                                                    class="edit-button"
+                                                    data-id="{{ item['id'] }}"
+                                                    data-day="{{ item['day'] or '' }}"
+                                                    data-start="{{ item['start_time'] or '' }}"
+                                                    data-end="{{ item['end_time'] or '' }}"
+                                                    data-code="{{ item['course_code']|default('', true) }}"
+                                                    data-subject="{{ item['subject_name']|default('', true) or item['subject']|default('', true) }}"
+                                                    data-faculty="{{ item['faculty_name']|default('', true) or item['faculty']|default('', true) }}"
+                                                    data-room="{{ item['room_no']|default('', true) or item['room']|default('', true) }}">
+                                                    Edit
+                                                </button>
+
+                                                <form class="inline-form"
+                                                      method="POST"
+                                                      action="{{ url_for('remove_timetable_entry', entry_id=item['id']) }}"
+                                                      onsubmit="return confirm('Permanently delete this timetable entry? This cannot be undone.');">
+                                                    <button type="submit" class="button-remove">
+                                                        Remove
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            {% endif %}
+        {% endfor %}
+
+        {% if totals.count == 0 %}
+            <div class="empty-state">No active timetable classes found.</div>
+        {% endif %}
+
+        <div class="count">
+            Active classes displayed:
+            <strong id="visibleCount">{{ totals.count }}</strong>
+        </div>
+    </section>
+
+    <!-- Edit Class -->
+    <section class="panel hidden" id="editPanel">
+        <h2>Edit Class</h2>
+
+        <form method="POST" id="editForm">
+            <div class="form-grid">
+
+                <div class="field">
+                    <label for="edit_day">Day</label>
+                    <select id="edit_day" name="day" required>
+                        {% for day in [
+                            'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+                            'Friday', 'Saturday', 'Sunday'
+                        ] %}
+                            <option value="{{ day }}">{{ day }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="edit_start_time">Start Time</label>
+                    <input id="edit_start_time" name="start_time" type="time" required>
+                </div>
+
+                <div class="field">
+                    <label for="edit_end_time">End Time</label>
+                    <input id="edit_end_time" name="end_time" type="time" required>
+                </div>
+
+                <div class="field">
+                    <label for="edit_course_code">Course Code</label>
+                    <input id="edit_course_code" name="course_code">
+                </div>
+
+                <div class="field">
+                    <label for="edit_subject_name">Subject</label>
+                    <input id="edit_subject_name" name="subject_name" required>
+                </div>
+
+                <div class="field">
+                    <label for="edit_faculty_name">Faculty</label>
+                    <input id="edit_faculty_name" name="faculty_name">
+                </div>
+
+                <div class="field">
+                    <label for="edit_room_no">Room</label>
+                    <input id="edit_room_no" name="room_no">
+                </div>
+
+                <div class="field">
+                    <label for="edit_class_name">Class / Section</label>
+                    <input id="edit_class_name" name="class_name"
+                           value="IV B.Tech ECE A" required>
+                </div>
+
+                <input type="hidden" name="department" value="ECE">
+                <input type="hidden" name="year" value="IV">
+                <input type="hidden" name="section" value="A">
+
+            </div>
+
+            <div class="form-actions">
+                <button type="submit">Save Changes</button>
+                <button type="button" id="cancelEdit" class="button-secondary">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </section>
+
+</div>
+
+<script>
+    function normalizeDay(value) {
+        const day = (value || "").trim().toLowerCase();
+
+        const aliases = {
+            mon: "monday",
+            tue: "tuesday",
+            tues: "tuesday",
+            wed: "wednesday",
+            thu: "thursday",
+            thur: "thursday",
+            thurs: "thursday",
+            fri: "friday",
+            sat: "saturday",
+            sun: "sunday"
+        };
+
+        return aliases[day] || day;
+    }
+
+    function formatTime(value) {
+        if (!value) return "-";
+
+        const parts = value.trim().split(":");
+        if (parts.length < 2) return value;
+
+        let hour = Number(parts[0]);
+        const minute = parts[1];
+
+        if (!Number.isFinite(hour) || hour < 0 || hour > 23) {
+            return value;
+        }
+
+        const suffix = hour >= 12 ? "PM" : "AM";
+        hour = hour % 12 || 12;
+
+        return `${String(hour).padStart(2, "0")}:${minute} ${suffix}`;
+    }
+
+    // Display times in 12-hour format.
+    document.querySelectorAll(".time-cell").forEach(cell => {
+        cell.textContent =
+            `${formatTime(cell.dataset.start)} – ${formatTime(cell.dataset.end)}`;
+    });
+
+    // Day filter and Clear Filters.
+    const dayFilter = document.getElementById("dayFilter");
+    const clearFilters = document.getElementById("clearFilters");
+    const visibleCount = document.getElementById("visibleCount");
+
+    function applyFilters() {
+        const selectedDay = dayFilter.value;
+        let count = 0;
+
+        document.querySelectorAll(".day-section").forEach(section => {
+            const matches =
+                selectedDay === "" || section.dataset.day === selectedDay;
+
+            section.hidden = !matches;
+
+            if (matches) {
+                count += section.querySelectorAll(".timetable-row").length;
+            }
+        });
+
+        visibleCount.textContent = count;
+    }
+
+    dayFilter.addEventListener("change", applyFilters);
+
+    clearFilters.addEventListener("click", () => {
+        dayFilter.value = "";
+        applyFilters();
+    });
+
+    // Edit form.
+    const editPanel = document.getElementById("editPanel");
+    const editForm = document.getElementById("editForm");
+
+    document.querySelectorAll(".edit-button").forEach(button => {
+        button.addEventListener("click", () => {
+            const id = button.dataset.id;
+
+            editForm.action =
+                `/admin/timetable/edit/${encodeURIComponent(id)}`;
+
+            const dayNames = {
+                monday: "Monday",
+                tuesday: "Tuesday",
+                wednesday: "Wednesday",
+                thursday: "Thursday",
+                friday: "Friday",
+                saturday: "Saturday",
+                sunday: "Sunday"
+            };
+
+            document.getElementById("edit_day").value =
+                dayNames[normalizeDay(button.dataset.day)] || "Monday";
+
+            document.getElementById("edit_start_time").value =
+                button.dataset.start || "";
+
+            document.getElementById("edit_end_time").value =
+                button.dataset.end || "";
+
+            document.getElementById("edit_course_code").value =
+                button.dataset.code || "";
+
+            document.getElementById("edit_subject_name").value =
+                button.dataset.subject || "";
+
+            document.getElementById("edit_faculty_name").value =
+                button.dataset.faculty || "";
+
+            document.getElementById("edit_room_no").value =
+                button.dataset.room || "";
+
+            document.getElementById("edit_class_name").value =
+                "IV B.Tech ECE A";
+
+            editPanel.classList.remove("hidden");
+            editPanel.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        });
+    });
+
+    document.getElementById("cancelEdit").addEventListener("click", () => {
+        editPanel.classList.add("hidden");
+    });
+
+    applyFilters();
+</script>
+
+</body>
+</html>

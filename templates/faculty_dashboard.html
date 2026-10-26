@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Faculty Dashboard</title>
+
+
+    <style>
+
+        :root {
+            --red: #dc2626;
+            --dark-red: #b91c1c;
+
+            --black: #111827;
+            --muted: #6b7280;
+
+            --border: #e5e7eb;
+            --background: #f5f6f8;
+            --white: #ffffff;
+
+            --green: #15803d;
+            --green-bg: #dcfce7;
+
+            --orange: #c2410c;
+            --orange-bg: #ffedd5;
+        }
+
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background: var(--background);
+
+            color: var(--black);
+
+            min-height: 100vh;
+
+            overflow-x: hidden;
+        }
+
+
+        /* =========================================================
+           CONTENT LAYER
+           ========================================================= */
+
+        header,
+        nav,
+        main,
+        footer {
+
+            position: relative;
+
+            z-index: 10;
+        }
+
+
+        /* =========================================================
+           HEADER
+           ========================================================= */
+
+        header {
+
+            background: var(--white);
+
+            border-bottom:
+                1px solid var(--border);
+
+            padding:
+                22px
+                max(
+                    20px,
+                    calc((100% - 1150px) / 2)
+                );
+
+            display: flex;
+
+            justify-content:
+                space-between;
+
+            align-items: center;
+
+            gap: 16px;
+        }
+
+
+        header h1 {
+
+            margin: 0;
+
+            font-size: 24px;
+        }
+
+
+        .identity {
+
+            text-align: right;
+
+            font-size: 14px;
+
+            color: var(--muted);
+        }
+
+
+        .identity strong {
+
+            display: block;
+
+            color: var(--black);
+
+            margin-bottom: 5px;
+        }
+
+
+        /* =========================================================
+           NAVIGATION
+           ========================================================= */
+
+        nav {
+
+            background: var(--white);
+
+            border-bottom:
+                1px solid var(--border);
+
+            padding:
+                10px
+                max(
+                    20px,
+                    calc((100% - 1150px) / 2)
+                );
+
+            display: flex;
+
+            flex-wrap: wrap;
+
+            gap: 8px;
+        }
+
+
+        nav a {
+
+            color: var(--black);
+
+            text-decoration: none;
+
+            padding:
+                11px 14px;
+
+            border-radius: 7px;
+
+            font-size: 14px;
+
+            transition:
+                background .15s ease,
+                color .15s ease;
+        }
+
+
+        nav a:hover,
+        nav a.active {
+
+            background: #fee2e2;
+
+            color: #991b1b;
+        }
+
+
+        nav .logout {
+
+            margin-left: auto;
+
+            color: white;
+
+            background: var(--red);
+        }
+
+
+        nav .logout:hover {
+
+            color: white;
+
+            background: var(--dark-red);
+        }
+
+
+        /* =========================================================
+           MAIN
+           ========================================================= */
+
+        main {
+
+            max-width: 1150px;
+
+            margin: 28px auto;
+
+            padding: 0 20px;
+        }
+
+
+        /* =========================================================
+           WELCOME
+           ========================================================= */
+
+        .welcome {
+
+            margin-bottom: 24px;
+        }
+
+
+        .welcome h2 {
+
+            margin:
+                0 0 8px;
+
+            font-size: 27px;
+        }
+
+
+        .welcome p {
+
+            margin: 0;
+
+            color: var(--muted);
+
+            line-height: 1.6;
+        }
+
+
+        /* =========================================================
+           STATISTICS
+           ========================================================= */
+
+        .stats {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    3,
+                    minmax(0, 1fr)
+                );
+
+            gap: 16px;
+
+            margin-bottom: 22px;
+        }
+
+
+        .stat,
+        .panel {
+
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.97
+                );
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 11px;
+
+            box-shadow:
+                0 2px 7px
+                rgba(
+                    0,
+                    0,
+                    0,
+                    0.03
+                );
+        }
+
+
+        /* =========================================================
+           STAT CARDS
+           ========================================================= */
+
+        .stat {
+
+            padding: 22px;
+        }
+
+
+        .stat-label {
+
+            color: var(--muted);
+
+            font-size: 13px;
+
+            margin-bottom: 10px;
+        }
+
+
+        .stat-value {
+
+            font-size: 22px;
+
+            font-weight: bold;
+
+            overflow-wrap:
+                anywhere;
+        }
+
+
+        .stat-note {
+
+            color: var(--muted);
+
+            font-size: 13px;
+
+            margin-top: 8px;
+        }
+
+
+        /* =========================================================
+           PANELS
+           ========================================================= */
+
+        .panel {
+
+            position: relative;
+
+            overflow: hidden;
+
+            padding: 23px;
+
+            margin-bottom: 22px;
+        }
+        /* =========================================================
+   BODY + SPIDER WEB BACKGROUND
+   ========================================================= */
+
+body {
+    margin: 0;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    background: var(--background);
+
+    color: var(--black);
+
+    position: relative;
+
+    isolation: isolate;
+
+    min-height: 100vh;
+
+    overflow-x: hidden;
+}
+
+
+/* =========================================================
+   SPIDER WEB ON BODY
+   ========================================================= */
+
+body::before,
+body::after {
+
+    content: "";
+
+    position: fixed;
+
+    width: 300px;
+    height: 300px;
+
+    pointer-events: none;
+
+    background-repeat: no-repeat;
+
+    background-size: contain;
+
+    opacity: 0.16;
+
+    z-index: -1;
+}
+
+
+/* =========================================================
+   TOP RIGHT SPIDER WEB
+   ========================================================= */
+
+body::before {
+
+    top: 0;
+
+    right: 0;
+
+    background-image: url(
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23c62828' stroke-width='1'%3E%3Cpath d='M200 0 L0 0 M200 0 L200 200 M200 0 L0 200 M200 0 L50 200 M200 0 L120 200 M200 0 L0 70 M200 0 L0 130 M200 0 L70 0 M200 0 L130 0'/%3E%3Cpath d='M170 0 Q170 30 200 30 M140 0 Q140 60 200 60 M110 0 Q110 90 200 90 M80 0 Q80 120 200 120 M50 0 Q50 150 200 150 M20 0 Q20 180 200 180'/%3E%3C/g%3E%3C/svg%3E"
+    );
+}
+
+
+/* =========================================================
+   BOTTOM LEFT SPIDER WEB
+   ========================================================= */
+
+body::after {
+
+    bottom: 0;
+
+    left: 0;
+
+    transform: rotate(180deg);
+
+    background-image: url(
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23c62828' stroke-width='1'%3E%3Cpath d='M200 0 L0 0 M200 0 L200 200 M200 0 L0 200 M200 0 L50 200 M200 0 L120 200 M200 0 L0 70 M200 0 L0 130 M200 0 L70 0 M200 0 L130 0'/%3E%3Cpath d='M170 0 Q170 30 200 30 M140 0 Q140 60 200 60 M110 0 Q110 90 200 90 M80 0 Q80 120 200 120 M50 0 Q50 150 200 150 M20 0 Q20 180 200 180'/%3E%3C/g%3E%3C/svg%3E"
+    );
+}
+
+
+/* =========================================================
+   KEEP DASHBOARD CONTENT ABOVE WEB
+   ========================================================= */
+
+header,
+nav,
+main,
+footer {
+
+    position: relative;
+
+    z-index: 10;
+}
+
+
+        /* =========================================================
+           SPIDER WEB BACKGROUND FOR PANELS
+           
+           Same style as the dashboard spider-web design,
+           but now attached to panels instead of the body.
+           ========================================================= */
+
+        .panel::before,
+        .panel::after {
+
+            content: "";
+
+            position: absolute;
+
+            width: 145px;
+
+            height: 145px;
+
+            pointer-events: none;
+
+            opacity: 0.500;
+
+            z-index: 0;
+
+            background-repeat: no-repeat;
+
+            background-size: contain;
+
+            background-image:
+                url(
+                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23c62828' stroke-width='1'%3E%3Cpath d='M200 0 L0 0 M200 0 L200 200 M200 0 L0 200 M200 0 L50 200 M200 0 L120 200 M200 0 L0 70 M200 0 L0 130 M200 0 L70 0 M200 0 L130 0'/%3E%3Cpath d='M170 0 Q170 30 200 30 M140 0 Q140 60 200 60 M110 0 Q110 90 200 90 M80 0 Q80 120 200 120 M50 0 Q50 150 200 150 M20 0 Q20 180 200 180'/%3E%3C/g%3E%3C/svg%3E"
+                );
+        }
+
+
+        /* TOP RIGHT */
+
+        .panel::before {
+
+            top: -55px;
+
+            right: -55px;
+        }
+
+
+        /* BOTTOM LEFT */
+
+        .panel::after {
+
+            bottom: -55px;
+
+            left: -55px;
+
+            transform:
+                rotate(180deg);
+        }
+
+
+        /* =========================================================
+           KEEP PANEL CONTENT ABOVE SPIDER WEB
+           ========================================================= */
+
+        .panel > * {
+
+            position: relative;
+
+            z-index: 2;
+        }
+
+
+        .panel h2 {
+
+            margin:
+                0 0 10px;
+
+            font-size: 20px;
+        }
+
+
+        .panel p {
+
+            color: var(--muted);
+
+            line-height: 1.6;
+        }
+
+
+        /* =========================================================
+           NEXT CLASS
+           ========================================================= */
+
+        .next-class {
+
+            margin-top: 16px;
+
+            padding: 16px;
+
+            background:
+                #fff7f7;
+
+            border-left:
+                4px solid var(--red);
+
+            border-radius: 7px;
+
+            line-height: 1.8;
+        }
+
+
+        .next-class strong {
+
+            display: block;
+        }
+
+
+        .next-class .date {
+
+            font-size: 18px;
+
+            font-weight: bold;
+
+            color: var(--black);
+
+            margin-bottom: 8px;
+        }
+
+
+        /* =========================================================
+           ACTIONS
+           ========================================================= */
+
+        .actions {
+
+            display: flex;
+
+            flex-wrap: wrap;
+
+            align-items: center;
+
+            gap: 10px;
+
+            margin-top: 18px;
+        }
+
+
+        .btn {
+
+            display: inline-block;
+
+            padding:
+                11px 15px;
+
+            border:
+                1px solid var(--red);
+
+            border-radius: 7px;
+
+            background:
+                var(--red);
+
+            color: white;
+
+            text-decoration: none;
+
+            font-weight: bold;
+
+            font-size: 14px;
+
+            font-family: inherit;
+
+            cursor: pointer;
+
+            transition:
+                background 0.2s ease,
+                transform 0.15s ease;
+        }
+
+
+        .btn:hover {
+
+            background:
+                var(--dark-red);
+
+            color: white;
+
+            transform:
+                translateY(-1px);
+        }
+
+
+        .btn.secondary {
+
+            color:
+                var(--black);
+
+            background:
+                white;
+
+            border-color:
+                var(--border);
+        }
+
+
+        .btn.secondary:hover {
+
+            background:
+                #f9fafb;
+
+            color:
+                var(--black);
+        }
+
+
+        /* =========================================================
+           INFO BOX
+           ========================================================= */
+
+        .info-box {
+
+            margin-top: 15px;
+
+            padding:
+                15px 17px;
+
+            background:
+                #f9fafb;
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 8px;
+
+            color:
+                var(--muted);
+
+            line-height: 1.6;
+
+            font-size: 14px;
+        }
+
+
+        /* =========================================================
+           EMPTY MESSAGE
+           ========================================================= */
+
+        .empty-message {
+
+            padding:
+                14px 16px;
+
+            background:
+                #f9fafb;
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 7px;
+
+            color:
+                var(--muted);
+
+            line-height: 1.6;
+        }
+
+
+        /* =========================================================
+           FOOTER
+           ========================================================= */
+
+        footer {
+
+            text-align: center;
+
+            padding: 25px;
+
+            color: var(--muted);
+
+            font-size: 12px;
+        }
+
+
+        /* =========================================================
+           RESPONSIVE
+           ========================================================= */
+
+        @media (max-width: 700px) {
+
+            header {
+
+                align-items:
+                    flex-start;
+
+                flex-direction:
+                    column;
+            }
+
+
+            .identity {
+
+                text-align:
+                    left;
+            }
+
+
+            .stats {
+
+                grid-template-columns:
+                    1fr;
+            }
+
+
+            nav .logout {
+
+                margin-left: 0;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     HEADER
+========================================================= -->
+
+<header>
+
+    <h1>
+        Faculty Dashboard
+    </h1>
+
+
+    <div class="identity">
+
+        <strong>
+
+            {{
+                faculty["name"]
+                if faculty
+                and faculty["name"]
+                else
+                faculty_name
+                or
+                session.get(
+                    "username",
+                    "Faculty"
+                )
+            }}
+
+        </strong>
+
+
+        <span>
+
+            {{
+                faculty["department"]
+                if faculty
+                and "department" in faculty.keys()
+                and faculty["department"]
+                else
+                "Faculty"
+            }}
+
+        </span>
+
+    </div>
+
+</header>
+
+
+<!-- =========================================================
+     NAVIGATION
+========================================================= -->
+
+<nav>
+
+    <a
+        class="active"
+        href="{{ url_for('faculty_dashboard') }}"
+    >
+        Dashboard
+    </a>
+
+
+    <a
+        href="{{ url_for('faculty_timetable') }}"
+    >
+        My Timetable
+    </a>
+
+
+    <!-- TODAY'S ATTENDANCE -->
+
+    <a
+        href="{{ url_for('faculty_today_attendance_page') }}"
+    >
+        Today's Attendance
+    </a>
+
+
+    <a
+        href="{{ url_for('faculty_attendance') }}"
+    >
+        Attendance
+    </a>
+
+
+    <a
+        class="logout"
+        href="{{ url_for('logout') }}"
+    >
+        Logout
+    </a>
+
+</nav>
+
+
+<!-- =========================================================
+     MAIN
+========================================================= -->
+
+<main>
+
+
+    <!-- =====================================================
+         WELCOME
+    ===================================================== -->
+
+    <section class="welcome">
+
+        <h2>
+
+            Welcome,
+
+            {{
+                faculty["name"]
+                if faculty
+                and faculty["name"]
+                else
+                faculty_name
+                or
+                session.get(
+                    "username",
+                    "Faculty"
+                )
+            }}
+
+        </h2>
+
+
+        <p>
+
+            Manage your assigned classes
+            and review student attendance.
+
+        </p>
+
+    </section>
+
+
+    <!-- =====================================================
+         STATISTICS
+    ===================================================== -->
+
+    <section class="stats">
+
+
+        <!-- FACULTY -->
+
+        <div class="stat">
+
+            <div class="stat-label">
+
+                Faculty Member
+
+            </div>
+
+
+            <div class="stat-value">
+
+                {{
+                    faculty["name"]
+                    if faculty
+                    and faculty["name"]
+                    else
+                    faculty_name
+                    or
+                    session.get(
+                        "username",
+                        "Faculty"
+                    )
+                }}
+
+            </div>
+
+
+            <div class="stat-note">
+
+                Your faculty account
+
+            </div>
+
+        </div>
+
+
+        <!-- SCHEDULED CLASSES -->
+
+        <div class="stat">
+
+            <div class="stat-label">
+
+                Scheduled Classes
+
+            </div>
+
+
+            <div class="stat-value">
+
+                {{ timetable_count|default(0) }}
+
+            </div>
+
+
+            <div class="stat-note">
+
+                Classes assigned to you
+
+            </div>
+
+        </div>
+
+
+        <!-- PRESENT RECORDS -->
+
+        <div class="stat">
+
+            <div class="stat-label">
+
+                Today's Present Records
+
+            </div>
+
+
+            <div class="stat-value">
+
+                {{ today_present|default(0) }}
+
+            </div>
+
+
+            <div class="stat-note">
+
+                Present and late records
+                in your classes today
+
+            </div>
+
+        </div>
+
+
+    </section>
+
+
+    <!-- =====================================================
+         NEXT CLASS
+    ===================================================== -->
+
+    <section class="panel">
+
+
+        <h2>
+
+            Your Next Class
+
+        </h2>
+
+
+        {% if next_class %}
+
+
+            <div class="next-class">
+
+
+                <div class="date">
+
+                    {{ next_class.display_date }}
+
+                </div>
+
+
+                <div>
+
+                    <b>
+                        Subject:
+                    </b>
+
+                    {{ next_class.subject_name }}
+
+                </div>
+
+
+                <div>
+
+                    <b>
+                        Time:
+                    </b>
+
+                    {{
+                        next_class.start_time
+                        |default("")
+                        |time12
+                    }}
+
+                    –
+
+                    {{
+                        next_class.end_time
+                        |default("")
+                        |time12
+                    }}
+
+                </div>
+
+
+                <div>
+
+                    <b>
+                        Room:
+                    </b>
+
+                    {{ next_class.room_no }}
+
+                </div>
+
+
+            </div>
+
+
+        {% else %}
+
+
+            <div class="empty-message">
+
+                No upcoming class was found
+                in your timetable for the next
+                15 days.
+
+            </div>
+
+
+        {% endif %}
+
+
+        <!-- =================================================
+             ACTION BUTTONS
+        ================================================= -->
+
+        <div class="actions">
+
+
+            <a
+                href="{{ url_for('faculty_timetable') }}"
+                class="btn"
+            >
+                View My Timetable
+            </a>
+
+
+            <a
+                href="{{ url_for('faculty_today_attendance_page') }}"
+                class="btn"
+            >
+                View Today's Attendance
+            </a>
+
+
+        </div>
+
+
+        <!-- =================================================
+             INFORMATION
+        ================================================= -->
+
+        <div class="info-box">
+
+            Today's attendance is available
+            on the dedicated attendance page.
+
+            If you have one class today,
+            that class will open directly.
+
+            If you have multiple classes today,
+            you can select the class you want
+            to view.
+
+        </div>
+
+
+    </section>
+
+
+</main>
+
+
+<!-- =========================================================
+     FOOTER
+========================================================= -->
+
+<footer>
+
+    Faculty Attendance Management System
+
+</footer>
+
+
+</body>
+
+</html>

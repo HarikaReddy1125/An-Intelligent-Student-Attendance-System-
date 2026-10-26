@@ -1,0 +1,621 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Management</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #ffffff;
+            color: #111111;
+        }
+
+        .navbar {
+            padding: 18px 30px;
+            border-bottom: 2px solid #dc2626;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .navbar h1 {
+            font-size: 21px;
+        }
+
+        .user-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .role {
+            color: #dc2626;
+            border: 1px solid #dc2626;
+            padding: 7px 12px;
+            border-radius: 6px;
+        }
+
+        .logout, .back, .btn {
+            display: inline-block;
+            border: none;
+            border-radius: 6px;
+            padding: 9px 13px;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .logout, .back, .btn-red {
+            background: #dc2626;
+            color: white;
+        }
+
+        .logout:hover, .back:hover, .btn-red:hover {
+            background: #b91c1c;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #dc2626;
+            border: 1px solid #dc2626;
+        }
+
+        .btn-outline:hover {
+            background: #fff1f2;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 28px auto;
+            padding: 0 20px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 22px;
+        }
+
+        .page-header h2 {
+            font-size: 26px;
+        }
+
+        .panel {
+            background: #ffffff;
+            border: 1px solid #dddddd;
+            border-radius: 10px;
+            padding: 22px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 7px rgba(0, 0, 0, 0.04);
+        }
+
+        .panel h3 {
+            font-size: 21px;
+            margin-bottom: 18px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        input, select {
+            width: 100%;
+            min-height: 40px;
+            padding: 9px 10px;
+            background: white;
+            color: #111111;
+            border: 1px solid #cccccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        input:focus, select:focus {
+            outline: 2px solid #dc2626;
+            border-color: #dc2626;
+        }
+
+        .form-actions {
+            margin-top: 17px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .search {
+            margin-bottom: 18px;
+        }
+
+        .flash {
+            padding: 12px 14px;
+            margin-bottom: 18px;
+            border: 1px solid #dddddd;
+            border-left: 5px solid #dc2626;
+            border-radius: 6px;
+        }
+
+        .flash.success {
+            border-left-color: #15803d;
+        }
+
+        .flash.error {
+            border-left-color: #dc2626;
+        }
+
+        .count {
+            margin-bottom: 14px;
+            color: #333333;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #eeeeee;
+            vertical-align: top;
+            font-size: 14px;
+        }
+
+        th {
+            background: #fff1f2;
+            white-space: nowrap;
+        }
+
+        tbody tr:hover {
+            background: #fffafa;
+        }
+
+        .face-yes {
+            color: #166534;
+            background: #dcfce7;
+            padding: 5px 8px;
+            border-radius: 15px;
+            white-space: nowrap;
+        }
+
+        .face-no {
+            color: #92400e;
+            background: #fef3c7;
+            padding: 5px 8px;
+            border-radius: 15px;
+            white-space: nowrap;
+        }
+
+        .actions {
+            min-width: 145px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 7px;
+            flex-wrap: wrap;
+        }
+
+        .edit-row {
+            display: none;
+        }
+
+        .edit-row.visible {
+            display: table-row;
+        }
+
+        .edit-row td {
+            background: #fffafa;
+            padding: 18px;
+        }
+
+        .edit-form {
+            max-width: 650px;
+        }
+
+        .edit-form h4 {
+            margin-bottom: 14px;
+            font-size: 17px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 28px;
+            color: #555555;
+        }
+
+        @media (max-width: 650px) {
+            .navbar, .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .panel {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <h1>Intelligent Student Attendance System</h1>
+
+        <div class="user-area">
+            <span class="role">{{ role|default('admin')|upper }}</span>
+            <a class="logout" href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h2>Student Management</h2>
+            <a class="back" href="/">← Dashboard</a>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}" role="status">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Add Student -->
+        <section class="panel">
+            <h3>Add New Student</h3>
+
+            <p style="margin-bottom: 16px; color: #444;">
+                The roll number is also the student's login username.
+            </p>
+
+            <form action="{{ url_for('add_student') }}" method="POST">
+                <div class="form-grid">
+                    <div>
+                        <label for="new_student_id">Roll Number *</label>
+                        <input id="new_student_id" name="student_id"
+                               required maxlength="100">
+                    </div>
+
+                    <div>
+                        <label for="new_name">Full Name *</label>
+                        <input id="new_name" name="name"
+                               required maxlength="150">
+                    </div>
+
+                    <div>
+                        <label for="new_mobile">Mobile Number</label>
+                        <input id="new_mobile" name="mobile"
+                               type="tel" maxlength="20">
+                    </div>
+
+                    <div>
+                        <label for="new_email">Email</label>
+                        <input id="new_email" name="email"
+                               type="email" maxlength="254">
+                    </div>
+
+                    <div>
+                        <label for="new_department">Department</label>
+                        <input id="new_department" name="department"
+                               maxlength="100">
+                    </div>
+
+                    <div>
+                        <label for="new_year">Year</label>
+                        <select id="new_year" name="year">
+                            <option value="">Select year</option>
+                            <option value="1">1st Year</option>
+                            <option value="2">2nd Year</option>
+                            <option value="3">3rd Year</option>
+                            <option value="4">4th Year</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="new_section">Section</label>
+                        <input id="new_section" name="section"
+                               maxlength="50">
+                    </div>
+
+                    <div>
+                        <label for="new_password">Initial Password *</label>
+                        <input id="new_password" name="password"
+                               type="password" minlength="8"
+                               autocomplete="new-password" required>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-red" type="submit">
+                        Add Student
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Student List -->
+        <section class="panel">
+            <h3>Registered Students</h3>
+
+            <input id="searchInput" class="search" type="search"
+                   placeholder="Search by ID, name, mobile, email, department or section..."
+                   aria-label="Search students">
+
+            <div class="count">
+                Active students displayed:
+                <strong>{{ students|length }}</strong>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Roll Number</th>
+                            <th>Name</th>
+                            <th>Mobile</th>
+                            <th>Email</th>
+                            <th>Department</th>
+                            <th>Year</th>
+                            <th>Section</th>
+                            <th>Face</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="studentTable">
+                        {% for student in students %}
+                            <tr class="student-row">
+                                <td>{{ loop.index }}</td>
+                                <td>{{ student["student_id"] }}</td>
+                                <td>{{ student["name"] }}</td>
+                                <td>{{ student["mobile"] or "-" }}</td>
+                                <td>{{ student["email"] or "-" }}</td>
+                                <td>{{ student["department"] or "-" }}</td>
+                                <td>{{ student["year"] or "-" }}</td>
+                                <td>{{ student["section"] or "-" }}</td>
+
+                                <td>
+                                    {% if student["face_encoding"] %}
+                                        <span class="face-yes">Enrolled</span>
+                                    {% else %}
+                                        <span class="face-no">Not enrolled</span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="actions">
+                                    <div class="action-buttons">
+                                        <button
+                                            class="btn btn-outline edit-toggle"
+                                            type="button"
+                                            data-target="edit-{{ student['id'] }}"
+                                            aria-expanded="false">
+                                            Edit
+                                        </button>
+
+                                        <form method="POST"
+                                              action="{{ url_for('remove_student', student_db_id=student['id']) }}"
+                                              onsubmit="return confirm('Remove this student from active management? Their attendance history will be retained.');">
+                                            <button class="btn btn-red"
+                                                    type="submit">
+                                                Remove
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Hidden until Edit is clicked -->
+                            <tr class="edit-row"
+                                id="edit-{{ student['id'] }}">
+                                <td colspan="10">
+                                    <form class="edit-form" method="POST"
+                                          action="{{ url_for('edit_student', student_db_id=student['id']) }}">
+                                        <h4>
+                                            Edit Student:
+                                            {{ student["student_id"] }}
+                                        </h4>
+
+                                        <div class="form-grid">
+                                            <div>
+                                                <label for="name-{{ student['id'] }}">
+                                                    Full Name *
+                                                </label>
+                                                <input
+                                                    id="name-{{ student['id'] }}"
+                                                    name="name"
+                                                    value="{{ student['name'] }}"
+                                                    required maxlength="150">
+                                            </div>
+
+                                            <div>
+                                                <label for="mobile-{{ student['id'] }}">
+                                                    Mobile
+                                                </label>
+                                                <input
+                                                    id="mobile-{{ student['id'] }}"
+                                                    name="mobile"
+                                                    type="tel"
+                                                    value="{{ student['mobile'] or '' }}"
+                                                    maxlength="20">
+                                            </div>
+
+                                            <div>
+                                                <label for="email-{{ student['id'] }}">
+                                                    Email
+                                                </label>
+                                                <input
+                                                    id="email-{{ student['id'] }}"
+                                                    name="email"
+                                                    type="email"
+                                                    value="{{ student['email'] or '' }}"
+                                                    maxlength="254">
+                                            </div>
+
+                                            <div>
+                                                <label for="department-{{ student['id'] }}">
+                                                    Department
+                                                </label>
+                                                <input
+                                                    id="department-{{ student['id'] }}"
+                                                    name="department"
+                                                    value="{{ student['department'] or '' }}"
+                                                    maxlength="100">
+                                            </div>
+
+                                            <div>
+                                                <label for="year-{{ student['id'] }}">
+                                                    Year
+                                                </label>
+                                                <select
+                                                    id="year-{{ student['id'] }}"
+                                                    name="year">
+                                                    <option value="">Select year</option>
+                                                    <option value="1" {% if student['year'] == 1 %}selected{% endif %}>1st Year</option>
+                                                    <option value="2" {% if student['year'] == 2 %}selected{% endif %}>2nd Year</option>
+                                                    <option value="3" {% if student['year'] == 3 %}selected{% endif %}>3rd Year</option>
+                                                    <option value="4" {% if student['year'] == 4 %}selected{% endif %}>4th Year</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label for="section-{{ student['id'] }}">
+                                                    Section
+                                                </label>
+                                                <input
+                                                    id="section-{{ student['id'] }}"
+                                                    name="section"
+                                                    value="{{ student['section'] or '' }}"
+                                                    maxlength="50">
+                                            </div>
+                                        </div>
+
+                                        <div class="form-actions">
+                                            <button class="btn btn-red"
+                                                    type="submit">
+                                                Save Changes
+                                            </button>
+
+                                            <button class="btn btn-outline cancel-edit"
+                                                    type="button"
+                                                    data-target="edit-{{ student['id'] }}">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="10" class="empty">
+                                    No active students found.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const searchInput = document.getElementById("searchInput");
+        const table = document.getElementById("studentTable");
+
+        function closeEdit(rowId) {
+            const editRow = document.getElementById(rowId);
+            if (!editRow) return;
+
+            editRow.classList.remove("visible");
+
+            const button = document.querySelector(
+                '.edit-toggle[data-target="' + rowId + '"]'
+            );
+
+            if (button) {
+                button.setAttribute("aria-expanded", "false");
+                button.textContent = "Edit";
+            }
+        }
+
+        document.querySelectorAll(".edit-toggle").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const rowId = button.dataset.target;
+                const editRow = document.getElementById(rowId);
+                if (!editRow) return;
+
+                const isOpen = editRow.classList.contains("visible");
+
+                // Close other open edit forms.
+                document.querySelectorAll(".edit-row.visible").forEach(
+                    function (row) {
+                        closeEdit(row.id);
+                    }
+                );
+
+                if (!isOpen) {
+                    editRow.classList.add("visible");
+                    button.setAttribute("aria-expanded", "true");
+                    button.textContent = "Close";
+                }
+            });
+        });
+
+        document.querySelectorAll(".cancel-edit").forEach(function (button) {
+            button.addEventListener("click", function () {
+                closeEdit(button.dataset.target);
+            });
+        });
+
+        searchInput.addEventListener("input", function () {
+            const query = this.value.toLowerCase().trim();
+
+            document.querySelectorAll(".student-row").forEach(function (row) {
+                const matches = row.innerText.toLowerCase().includes(query);
+                row.style.display = matches ? "" : "none";
+
+                const nextRow = row.nextElementSibling;
+                if (nextRow && nextRow.classList.contains("edit-row")) {
+                    if (!matches) {
+                        closeEdit(nextRow.id);
+                    }
+                    nextRow.style.display = matches &&
+                        nextRow.classList.contains("visible") ? "table-row" : "none";
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+.env
+venv/
+venv311/
+__pycache__/
+*.pyc
+
+attendance_backup.db
+attendance_before_bulk_update.db
+
+dataset/
+Archives/
+Documents/
+tests/
+
+*.zip
+students.xlsx
+attendance.db

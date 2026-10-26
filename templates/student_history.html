@@ -1,0 +1,50 @@
+{% extends "student_base.html" %}
+{% set active_page = 'history' %}
+{% block title %}Attendance History{% endblock %}
+{% block content %}
+<section class="heading"><div><h2>Attendance History</h2><p>View recorded attendance date by date.</p></div></section>
+
+<div class="card">
+  <form method="get">
+    <div class="formgrid">
+      <div class="field"><label for="start_date">From date</label><input type="date" id="start_date" name="start_date" value="{{ start_date }}"></div>
+      <div class="field"><label for="end_date">To date</label><input type="date" id="end_date" name="end_date" value="{{ end_date }}"></div>
+    </div>
+    <p><button class="btn primary" type="submit">Filter History</button>
+       <a class="btn" href="{{ url_for('student_attendance_history') }}">Clear</a></p>
+  </form>
+</div>
+
+<div class="stats">
+  <div class="stat"><label>Records found</label><div class="value">{{ total_count }}</div></div>
+  <div class="stat"><label>Present / Late</label><div class="value">{{ present_count }}</div></div>
+  <div class="stat"><label>Present percentage of listed records</label><div class="value">{{ percentage }}%</div></div>
+</div>
+
+{% if records %}
+<div class="tablebox">
+  <table>
+    <thead><tr><th>Date</th><th>Subject / Class</th><th>Class time</th><th>Status</th><th>Marked time</th></tr></thead>
+    <tbody>
+    {% for item in records %}
+      {% set s = (item.status or 'Not marked')|lower|trim %}
+      <tr>
+        <td>{{ item.date }}</td>
+        <td><b>{{ item.subject or item.class_name or 'Class' }}</b></td>
+        <td>{{ item.start_time or '—' }}{% if item.end_time %} – {{ item.end_time }}{% endif %}</td>
+        <td>
+          {% if s == 'present' %}<span class="badge present">PRESENT</span>
+          {% elif s == 'late' %}<span class="badge late">LATE</span>
+          {% elif s == 'absent' %}<span class="badge absent">ABSENT</span>
+          {% else %}<span class="badge notmarked">{{ item.status or 'Not marked' }}</span>{% endif %}
+        </td>
+        <td>{{ item.time or '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">No attendance records found for this date range.</div>
+{% endif %}
+{% endblock %}

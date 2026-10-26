@@ -1,0 +1,85 @@
+
+/* ===== FIX: VISIBLE SPIDER-WEB CORNERS ===== */
+
+body {
+    background-color: #ffffff !important;
+
+    background-image:
+        /* Top-left corner */
+        repeating-conic-gradient(
+            from 0deg at 0% 0%,
+            transparent 0deg 14deg,
+            rgba(242, 13, 34, 0.35) 14.5deg 15deg,
+            transparent 15.5deg 30deg
+        ),
+        repeating-radial-gradient(
+            circle at 0% 0%,
+            transparent 0 17px,
+            rgba(242, 13, 34, 0.35) 18px 18.7px,
+            transparent 19.5px 34px
+        ),
+
+        /* Top-right corner */
+        repeating-conic-gradient(
+            from 90deg at 100% 0%,
+            transparent 0deg 14deg,
+            rgba(242, 13, 34, 0.35) 14.5deg 15deg,
+            transparent 15.5deg 30deg
+        ),
+        repeating-radial-gradient(
+            circle at 100% 0%,
+            transparent 0 17px,
+            rgba(242, 13, 34, 0.35) 18px 18.7px,
+            transparent 19.5px 34px
+        ),
+
+        /* Bottom-left corner */
+        repeating-conic-gradient(
+            from 270deg at 0% 100%,
+            transparent 0deg 14deg,
+            rgba(242, 13, 34, 0.35) 14.5deg 15deg,
+            transparent 15.5deg 30deg
+        ),
+        repeating-radial-gradient(
+            circle at 0% 100%,
+            transparent 0 17px,
+            rgba(242, 13, 34, 0.35) 18px 18.7px,
+            transparent 19.5px 34px
+        ),
+
+        /* Bottom-right corner */
+        repeating-conic-gradient(
+            from 180deg at 100% 100%,
+            transparent 0deg 14deg,
+            rgba(242, 13, 34, 0.35) 14.5deg 15deg,
+            transparent 15.5deg 30deg
+        ),
+        repeating-radial-gradient(
+            circle at 100% 100%,
+            transparent 0 17px,
+            rgba(242, 13, 34, 0.35) 18px 18.7px,
+            transparent 19.5px 34px
+        ) !important;
+
+    background-size:
+        200px 200px,
+        200px 200px,
+        200px 200px,
+        200px 200px,
+        200px 200px,
+        200px 200px,
+        200px 200px,
+        200px 200px;
+
+    background-position:
+        top left,
+        top left,
+        top right,
+        top right,
+        bottom left,
+        bottom left,
+        bottom right,
+        bottom right;
+
+    background-repeat: no-repeat;
+}

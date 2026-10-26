@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Enroll Student Face</title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        /* =====================================================
+           BODY
+           ===================================================== */
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background: #ffffff;
+
+            color: #111111;
+
+            position: relative;
+
+            isolation: isolate;
+
+            min-height: 100vh;
+        }
+
+
+        /* Subtle spider-web patterns: top-right and bottom-left */
+body {
+    position: relative;
+    isolation: isolate;
+}
+
+/* Shared styling for both webs */
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    width: 280px;
+    height: 280px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.16;
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+/* Top-right spider web */
+body::before {
+    top: 0;
+    right: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23c62828' stroke-width='1'%3E%3Cpath d='M200 0 L0 0 M200 0 L200 200 M200 0 L0 200 M200 0 L50 200 M200 0 L120 200 M200 0 L0 70 M200 0 L0 130 M200 0 L70 0 M200 0 L130 0'/%3E%3Cpath d='M170 0 Q170 30 200 30 M140 0 Q140 60 200 60 M110 0 Q110 90 200 90 M80 0 Q80 120 200 120 M50 0 Q50 150 200 150 M20 0 Q20 180 200 180'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+
+/* Bottom-left spider web — visible beside the sidebar */
+body::after {
+    content: "";
+    position: fixed;
+    width: 280px;
+    height: 280px;
+    bottom: 0;
+    left: 0;
+    transform: rotate(180deg);
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0.16;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23c62828' stroke-width='1'%3E%3Cpath d='M200 0 L0 0 M200 0 L200 200 M200 0 L0 200 M200 0 L50 200 M200 0 L120 200 M200 0 L0 70 M200 0 L0 130 M200 0 L70 0 M200 0 L130 0'/%3E%3Cpath d='M170 0 Q170 30 200 30 M140 0 Q140 60 200 60 M110 0 Q110 90 200 90 M80 0 Q80 120 200 120 M50 0 Q50 150 200 150 M20 0 Q20 180 200 180'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+
+
+
+        /* =====================================================
+           MAIN CONTENT
+           ===================================================== */
+
+        .container {
+
+            max-width: 1000px;
+
+            margin: 40px auto;
+
+            padding: 20px;
+
+            position: relative;
+
+            z-index: 2;
+        }
+
+
+        /* =====================================================
+           CARD
+           ===================================================== */
+
+        .card {
+
+            background: #ffffff;
+
+            border: 1px solid #eeeeee;
+
+            border-radius: 16px;
+
+            padding: 28px;
+
+            margin-bottom: 20px;
+
+            box-shadow:
+                0 6px 25px rgba(0, 0, 0, 0.07);
+        }
+
+
+        h1 {
+
+            margin-top: 0;
+
+            color: #111111;
+
+            font-size: 30px;
+        }
+
+
+        h2 {
+
+            color: #111111;
+        }
+
+
+        p {
+
+            color: #555555;
+        }
+
+
+        /* =====================================================
+           SEARCH
+           ===================================================== */
+
+        .search-box {
+
+            display: flex;
+
+            gap: 12px;
+
+            margin-top: 20px;
+        }
+
+
+        input {
+
+            flex: 1;
+
+            padding: 13px 15px;
+
+            border: 2px solid #eeeeee;
+
+            border-radius: 8px;
+
+            font-size: 16px;
+
+            color: #111111;
+
+            background: #ffffff;
+
+            outline: none;
+
+            transition: 0.2s;
+        }
+
+
+        input:focus {
+
+            border-color: #c62828;
+
+            box-shadow:
+                0 0 0 3px
+                rgba(198, 40, 40, 0.08);
+        }
+
+
+        /* =====================================================
+           BUTTONS
+           ===================================================== */
+
+        button {
+
+            border: none;
+
+            border-radius: 8px;
+
+            padding: 12px 20px;
+
+            font-size: 15px;
+
+            font-weight: 600;
+
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+
+        button:hover {
+
+            transform: translateY(-1px);
+        }
+
+
+        .primary {
+
+            background: #c62828;
+
+            color: white;
+        }
+
+
+        .primary:hover {
+
+            background: #a91f1f;
+        }
+
+
+        .success {
+
+            background: #c62828;
+
+            color: white;
+        }
+
+
+        .success:hover {
+
+            background: #a91f1f;
+        }
+
+
+        .danger {
+
+            background: #b71c1c;
+
+            color: white;
+        }
+
+
+        .danger:hover {
+
+            background: #8f1616;
+        }
+
+
+        .secondary {
+
+            background: #222222;
+
+            color: white;
+        }
+
+
+        .secondary:hover {
+
+            background: #000000;
+        }
+
+
+        button:disabled {
+
+            opacity: 0.5;
+
+            cursor: not-allowed;
+
+            transform: none;
+        }
+
+
+        /* =====================================================
+           STUDENT INFORMATION
+           ===================================================== */
+
+        #studentInfo {
+
+            display: none;
+
+            margin-top: 25px;
+        }
+
+
+        .student-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, 1fr);
+
+            gap: 12px;
+        }
+
+
+        .info {
+
+            background: #ffffff;
+
+            border: 1px solid #eeeeee;
+
+            border-left: 4px solid #c62828;
+
+            padding: 13px;
+
+            border-radius: 8px;
+
+            color: #111111;
+        }
+
+
+        .info strong {
+
+            display: block;
+
+            color: #c62828;
+
+            margin-bottom: 5px;
+        }
+
+
+        /* =====================================================
+           CAMERA
+           ===================================================== */
+
+        .camera-area {
+
+            display: none;
+
+            text-align: center;
+        }
+
+
+        video {
+
+            width: 100%;
+
+            max-width: 700px;
+
+            border-radius: 14px;
+
+            background: #111111;
+
+            transform: scaleX(-1);
+
+            border: 3px solid #c62828;
+        }
+
+
+        .sample-counter {
+
+            font-size: 22px;
+
+            font-weight: bold;
+
+            margin: 15px 0;
+
+            color: #c62828;
+        }
+
+
+        /* =====================================================
+           MESSAGE
+           ===================================================== */
+
+        #message {
+
+            margin-top: 15px;
+
+            padding: 12px;
+
+            border-radius: 8px;
+
+            display: none;
+
+            font-weight: 600;
+        }
+
+
+        .success-message {
+
+            background: #fdecec;
+
+            color: #9b1c1c;
+
+            border-left: 4px solid #c62828;
+        }
+
+
+        .error-message {
+
+            background: #fee2e2;
+
+            color: #991b1b;
+
+            border-left: 4px solid #b71c1c;
+        }
+
+
+        .warning-message {
+
+            background: #fff4e5;
+
+            color: #92400e;
+
+            border-left: 4px solid #d97706;
+        }
+
+
+        /* =====================================================
+           ACTIONS
+           ===================================================== */
+
+        .actions {
+
+            display: flex;
+
+            gap: 10px;
+
+            justify-content: center;
+
+            flex-wrap: wrap;
+
+            margin-top: 15px;
+        }
+
+
+        /* =====================================================
+           BACK
+           ===================================================== */
+
+        .back {
+
+            display: inline-block;
+
+            margin-bottom: 20px;
+
+            text-decoration: none;
+
+            color: #c62828;
+
+            font-weight: 600;
+
+            position: relative;
+
+            z-index: 3;
+        }
+
+
+        .back:hover {
+
+            color: #8f1616;
+        }
+
+
+        /* =====================================================
+           ALREADY ENROLLED
+           ===================================================== */
+
+        .already-enrolled {
+
+            display: inline-block;
+
+            padding: 8px 14px;
+
+            border-radius: 20px;
+
+            background: #fdecec;
+
+            color: #a91f1f;
+
+            font-size: 14px;
+
+            font-weight: 600;
+        }
+
+
+        /* =====================================================
+           MOBILE
+           ===================================================== */
+
+        @media(max-width: 700px) {
+
+            .container {
+
+                margin: 20px auto;
+
+                padding: 15px;
+            }
+
+
+            .student-grid {
+
+                grid-template-columns: 1fr;
+            }
+
+
+            .search-box {
+
+                flex-direction: column;
+            }
+
+
+            body::before,
+            body::after {
+
+                width: 190px;
+
+                height: 190px;
+
+                opacity: 0.11;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <a
+        class="back"
+        href="/admin"
+    >
+        ← Back to Admin Dashboard
+    </a>
+
+
+    <!-- ================================================= -->
+    <!-- SEARCH -->
+    <!-- ================================================= -->
+
+    <div class="card">
+
+        <h1>
+            Face Enrollment
+        </h1>
+
+        <p>
+            Enter the student's roll number
+            to find the student and manage
+            their face enrollment.
+        </p>
+
+
+        <div class="search-box">
+
+            <input
+                id="rollNumber"
+                type="text"
+                placeholder="Enter Roll Number"
+                autocomplete="off"
+            >
+
+
+            <button
+                class="primary"
+                onclick="findStudent()"
+            >
+                Find Student
+            </button>
+
+        </div>
+
+
+        <div id="message"></div>
+
+
+        <!-- ============================================= -->
+        <!-- STUDENT DETAILS -->
+        <!-- ============================================= -->
+
+        <div id="studentInfo">
+
+            <h2>
+                Student Details
+            </h2>
+
+
+            <div class="student-grid">
+
+
+                <div class="info">
+
+                    <strong>
+                        Roll Number
+                    </strong>
+
+                    <div id="studentId">
+                        -
+                    </div>
+
+                </div>
+
+
+                <div class="info">
+
+                    <strong>
+                        Name
+                    </strong>
+
+                    <div id="studentName">
+                        -
+                    </div>
+
+                </div>
+
+
+                <div class="info">
+
+                    <strong>
+                        Email
+                    </strong>
+
+                    <div id="studentEmail">
+                        -
+                    </div>
+
+                </div>
+
+
+                <div class="info">
+
+                    <strong>
+                        Mobile
+                    </strong>
+
+                    <div id="studentMobile">
+                        -
+                    </div>
+
+                </div>
+
+
+                <div class="info">
+
+                    <strong>
+                        Department
+                    </strong>
+
+                    <div id="studentDepartment">
+                        -
+                    </div>
+
+                </div>
+
+
+                <div class="info">
+
+                    <strong>
+                        Year
+                    </strong>
+
+                    <div id="studentYear">
+                        -
+                    </div>
+
+                </div>
+
+
+                <div class="info">
+
+                    <strong>
+                        Section
+                    </strong>
+
+                    <div id="studentSection">
+                        -
+                    </div>
+
+                </div>
+
+
+                <div class="info">
+
+                    <strong>
+                        Face Status
+                    </strong>
+
+                    <div id="faceStatus">
+                        -
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+            <!-- ========================================= -->
+            <!-- ACTIONS -->
+            <!-- ========================================= -->
+
+            <div class="actions">
+
+
+                <!-- ONLY FOR NOT ENROLLED -->
+
+                <button
+                    class="success"
+                    id="startButton"
+                    onclick="startEnrollment()"
+                >
+                    Start Face Enrollment
+                </button>
+
+
+                <!-- ONLY FOR ALREADY ENROLLED -->
+
+                <button
+                    class="danger"
+                    id="removeButton"
+                    onclick="removeFace()"
+                    style="display:none"
+                >
+                    Remove Existing Face
+                </button>
+
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- CAMERA -->
+    <!-- ================================================= -->
+
+    <div
+        class="card camera-area"
+        id="cameraArea"
+    >
+
+        <h2>
+            Face Enrollment Camera
+        </h2>
+
+
+        <p>
+            Keep only one person in front
+            of the camera.
+        </p>
+
+
+        <video
+            id="video"
+            autoplay
+            playsinline
+        ></video>
+
+
+        <div
+            class="sample-counter"
+            id="sampleCounter"
+        >
+            Samples: 0 / 5
+        </div>
+
+
+        <div class="actions">
+
+
+            <button
+                class="primary"
+                id="captureButton"
+                onclick="captureSample()"
+            >
+                Capture Sample
+            </button>
+
+
+            <button
+                class="secondary"
+                onclick="stopCamera()"
+            >
+                Cancel
+            </button>
+
+
+        </div>
+
+
+        <canvas
+            id="canvas"
+            style="display:none"
+        ></canvas>
+
+
+    </div>
+
+
+</div>
+
+
+<script>
+
+
+let currentStudent = null;
+
+let cameraStream = null;
+
+let embeddings = [];
+
+let capturing = false;
+
+
+
+// ========================================================
+// MESSAGE
+// ========================================================
+
+function showMessage(
+    message,
+    type = "success"
+) {
+
+    const box =
+        document.getElementById(
+            "message"
+        );
+
+
+    box.textContent = message;
+
+    box.className = "";
+
+    box.id = "message";
+
+    box.style.display = "block";
+
+
+    if (type === "error") {
+
+        box.classList.add(
+            "error-message"
+        );
+
+    }
+
+    else if (type === "warning") {
+
+        box.classList.add(
+            "warning-message"
+        );
+
+    }
+
+    else {
+
+        box.classList.add(
+            "success-message"
+        );
+
+    }
+
+}
+
+
+
+function hideMessage() {
+
+    document.getElementById(
+        "message"
+    ).style.display = "none";
+
+}
+
+
+
+// ========================================================
+// FIND STUDENT
+// ========================================================
+
+async function findStudent() {
+
+    const rollNumber =
+        document.getElementById(
+            "rollNumber"
+        ).value.trim();
+
+
+    if (!rollNumber) {
+
+        showMessage(
+            "Please enter a roll number.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    hideMessage();
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/admin/enroll-students/find",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        roll_number:
+                            rollNumber
+                    })
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if (!result.success) {
+
+            document.getElementById(
+                "studentInfo"
+            ).style.display = "none";
+
+
+            showMessage(
+                result.message,
+                "error"
+            );
+
+
+            return;
+        }
+
+
+        currentStudent =
+            result.student;
+
+
+        displayStudent(
+            currentStudent
+        );
+
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+
+        showMessage(
+            "Unable to contact server.",
+            "error"
+        );
+
+    }
+
+}
+
+
+
+// ========================================================
+// DISPLAY STUDENT
+// ========================================================
+
+function displayStudent(student) {
+
+    document.getElementById(
+        "studentInfo"
+    ).style.display = "block";
+
+
+    document.getElementById(
+        "studentId"
+    ).textContent =
+        student.student_id || "-";
+
+
+    document.getElementById(
+        "studentName"
+    ).textContent =
+        student.name || "-";
+
+
+    document.getElementById(
+        "studentEmail"
+    ).textContent =
+        student.email || "-";
+
+
+    document.getElementById(
+        "studentMobile"
+    ).textContent =
+        student.mobile || "-";
+
+
+    document.getElementById(
+        "studentDepartment"
+    ).textContent =
+        student.department || "-";
+
+
+    document.getElementById(
+        "studentYear"
+    ).textContent =
+        student.year || "-";
+
+
+    document.getElementById(
+        "studentSection"
+    ).textContent =
+        student.section || "-";
+
+
+    const faceStatus =
+        document.getElementById(
+            "faceStatus"
+        );
+
+
+    const startButton =
+        document.getElementById(
+            "startButton"
+        );
+
+
+    const removeButton =
+        document.getElementById(
+            "removeButton"
+        );
+
+
+    /*
+     * ALREADY ENROLLED
+     *
+     * Show ONLY remove button.
+     */
+
+    if (student.already_enrolled) {
+
+        faceStatus.innerHTML =
+            '<span class="already-enrolled">' +
+            'Already Enrolled' +
+            '</span>';
+
+
+        startButton.style.display =
+            "none";
+
+
+        removeButton.style.display =
+            "inline-block";
+
+
+        return;
+    }
+
+
+    /*
+     * NOT ENROLLED
+     *
+     * Show ONLY start enrollment.
+     */
+
+    faceStatus.textContent =
+        "Not Enrolled";
+
+
+    startButton.style.display =
+        "inline-block";
+
+
+    removeButton.style.display =
+        "none";
+
+}
+
+
+
+// ========================================================
+// START ENROLLMENT
+// ========================================================
+
+async function startEnrollment() {
+
+    if (!currentStudent) {
+
+        showMessage(
+            "Find a student first.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    /*
+     * Safety:
+     * Never start enrollment if
+     * student already has a face.
+     */
+
+    if (currentStudent.already_enrolled) {
+
+        showMessage(
+            "This student is already enrolled. Remove the existing face first.",
+            "warning"
+        );
+
+        return;
+    }
+
+
+    embeddings = [];
+
+    updateCounter();
+
+
+    try {
+
+        cameraStream =
+            await navigator.mediaDevices
+                .getUserMedia({
+
+                    video: {
+
+                        width: {
+                            ideal: 640
+                        },
+
+                        height: {
+                            ideal: 480
+                        },
+
+                        facingMode: "user"
+
+                    },
+
+                    audio: false
+
+                });
+
+
+        const video =
+            document.getElementById(
+                "video"
+            );
+
+
+        video.srcObject =
+            cameraStream;
+
+
+        document.getElementById(
+            "cameraArea"
+        ).style.display =
+            "block";
+
+
+        document.getElementById(
+            "captureButton"
+        ).disabled = false;
+
+
+        showMessage(
+            "Camera started. Position your face clearly.",
+            "success"
+        );
+
+
+        window.scrollTo({
+
+            top:
+                document.getElementById(
+                    "cameraArea"
+                ).offsetTop,
+
+            behavior: "smooth"
+
+        });
+
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+
+        showMessage(
+            "Camera permission was denied or the camera is unavailable.",
+            "error"
+        );
+
+    }
+
+}
+
+
+
+// ========================================================
+// CAPTURE SAMPLE
+// ========================================================
+
+async function captureSample() {
+
+    if (capturing) {
+
+        return;
+    }
+
+
+    if (
+        embeddings.length >= 5
+    ) {
+
+        return;
+    }
+
+
+    capturing = true;
+
+
+    const button =
+        document.getElementById(
+            "captureButton"
+        );
+
+
+    button.disabled = true;
+
+
+    const video =
+        document.getElementById(
+            "video"
+        );
+
+
+    const canvas =
+        document.getElementById(
+            "canvas"
+        );
+
+
+    canvas.width =
+        video.videoWidth;
+
+
+    canvas.height =
+        video.videoHeight;
+
+
+    const context =
+        canvas.getContext("2d");
+
+
+    context.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    const image =
+        canvas.toDataURL(
+            "image/jpeg",
+            0.90
+        );
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/admin/enroll-students/capture",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        image: image
+                    })
+
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if (!result.success) {
+
+            showMessage(
+                result.message,
+                "warning"
+            );
+
+
+            return;
+        }
+
+
+        embeddings.push(
+            result.embedding
+        );
+
+
+        updateCounter();
+
+
+        if (
+            embeddings.length >= 5
+        ) {
+
+            showMessage(
+                "5 samples captured. Saving enrollment...",
+                "success"
+            );
+
+
+            await saveEnrollment();
+
+
+        }
+
+        else {
+
+            showMessage(
+
+                `Sample ${embeddings.length}/5 captured. ` +
+                `Change your face position slightly and capture again.`,
+
+                "success"
+
+            );
+
+        }
+
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+
+        showMessage(
+            "Could not capture sample.",
+            "error"
+        );
+
+    }
+
+    finally {
+
+        capturing = false;
+
+
+        if (
+            embeddings.length < 5
+        ) {
+
+            button.disabled = false;
+
+        }
+
+    }
+
+}
+
+
+
+// ========================================================
+// COUNTER
+// ========================================================
+
+function updateCounter() {
+
+    document.getElementById(
+        "sampleCounter"
+    ).textContent =
+        `Samples: ${embeddings.length} / 5`;
+
+}
+
+
+
+// ========================================================
+// SAVE ENROLLMENT
+// ========================================================
+
+async function saveEnrollment() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/admin/enroll-students/save",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        student_id:
+                            currentStudent.student_id,
+
+                        embeddings:
+                            embeddings
+
+                    })
+
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if (!result.success) {
+
+            showMessage(
+                result.message,
+                "error"
+            );
+
+
+            return;
+        }
+
+
+        showMessage(
+
+            `Face enrollment completed for ${result.student.name}.`,
+
+            "success"
+
+        );
+
+
+        currentStudent.already_enrolled =
+            true;
+
+
+        displayStudent(
+            currentStudent
+        );
+
+
+        stopCamera();
+
+
+        embeddings = [];
+
+
+        updateCounter();
+
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+
+        showMessage(
+            "Could not save face enrollment.",
+            "error"
+        );
+
+    }
+
+}
+
+
+
+// ========================================================
+// REMOVE FACE
+// ========================================================
+
+async function removeFace() {
+
+    if (!currentStudent) {
+
+        return;
+    }
+
+
+    const confirmed =
+        confirm(
+
+            `Remove face enrollment for ` +
+            `${currentStudent.name}?`
+
+        );
+
+
+    if (!confirmed) {
+
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/admin/enroll-students/remove",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        student_id:
+                            currentStudent.student_id
+
+                    })
+
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if (!result.success) {
+
+            showMessage(
+                result.message,
+                "error"
+            );
+
+
+            return;
+        }
+
+
+        currentStudent.already_enrolled =
+            false;
+
+
+        displayStudent(
+            currentStudent
+        );
+
+
+        showMessage(
+            "Existing face enrollment removed.",
+            "success"
+        );
+
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+
+        showMessage(
+            "Could not remove face enrollment.",
+            "error"
+        );
+
+    }
+
+}
+
+
+
+// ========================================================
+// STOP CAMERA
+// ========================================================
+
+function stopCamera() {
+
+    if (cameraStream) {
+
+        cameraStream
+            .getTracks()
+            .forEach(
+                track =>
+                    track.stop()
+            );
+
+
+        cameraStream = null;
+    }
+
+
+    const video =
+        document.getElementById(
+            "video"
+        );
+
+
+    video.srcObject = null;
+
+
+    document.getElementById(
+        "cameraArea"
+    ).style.display =
+        "none";
+
+
+    embeddings = [];
+
+
+    updateCounter();
+
+}
+
+
+
+// ========================================================
+// ENTER KEY
+// ========================================================
+
+document.getElementById(
+    "rollNumber"
+).addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.key === "Enter"
+        ) {
+
+            findStudent();
+
+        }
+
+    }
+);
+
+
+</script>
+
+
+</body>
+
+</html>

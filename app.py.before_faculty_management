@@ -1,0 +1,4485 @@
+﻿from werkzeug.security import check_password_hash, generate_password_hash
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session,
+    jsonify,
+    flash,
+    send_file
+)
+
+import sqlite3
+import os
+import base64
+import cv2
+import numpy as np
+import os
+from flask_mail import Mail, Message
+from datetime import datetime, date, timedelta
+from functools import wraps
+from io import BytesIO
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Table,
+    TableStyle,
+    Paragraph,
+    Spacer
+)
+
+
+# ============================================================
+# FLASK CONFIGURATION
+# ============================================================
+
+app = Flask(__name__)
+app.config.update(
+    MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
+    MAIL_PORT=int(os.getenv("MAIL_PORT", "587")),
+    MAIL_USE_TLS=True,
+    MAIL_USE_SSL=False,
+    MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
+    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
+    MAIL_DEFAULT_SENDER=os.getenv("MAIL_USERNAME"),
+)
+
+mail = Mail(app)
+
+# ============================================================
+# TEMPLATE TIME FORMATTER
+# ============================================================
+
+def format_time_12h(value):
+    if not value:
+        return ""
+
+    value = str(value).strip()
+
+    for fmt in (
+        "%H:%M:%S",
+        "%H:%M",
+        "%I:%M %p",
+        "%I:%M:%S %p"
+    ):
+        try:
+            return datetime.strptime(
+                value,
+                fmt
+            ).strftime("%I:%M %p").lstrip("0")
+
+        except ValueError:
+            continue
+
+    return value
+
+
+app.jinja_env.filters["time12"] = format_time_12h
+
+
+app.secret_key = "intelligent_attendance_system_secret_key"
+
+DATABASE_PATH = r"D:\student_attendance\attendance.db"
+
+ACADEMIC_START_DATE = "2026-07-01"
+
+
+# ============================================================
+# DATABASE CONNECTION
+# ============================================================
+
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def get_table_columns(table_name):
+    conn = get_db_connection()
+
+    try:
+        rows = conn.execute(
+            f'PRAGMA table_info("{table_name}")'
+        ).fetchall()
+
+        return {row["name"] for row in rows}
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# DAY ALIASES
+# ============================================================
+
+DAY_ALIASES = {
+    "Mon": ["mon", "monday"],
+    "Tue": ["tue", "tuesday"],
+    "Wed": ["wed", "wednesday"],
+    "Thu": ["thu", "thursday"],
+    "Fri": ["fri", "friday"],
+    "Sat": ["sat", "saturday"],
+    "Sun": ["sun", "sunday"]
+}
+
+
+def get_day_aliases(selected_date):
+    try:
+        selected_day = datetime.strptime(
+            selected_date,
+            "%Y-%m-%d"
+        ).strftime("%a")
+
+        return DAY_ALIASES.get(selected_day, [])
+
+    except (ValueError, TypeError):
+        return []
+
+
+# ============================================================
+# AUTHENTICATION
+# ============================================================
+
+def login_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def role_required(required_role):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if "user_id" not in session:
+                return redirect(url_for("login"))
+
+            if session.get("role") != required_role:
+                return redirect(url_for("login"))
+
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+# ============================================================
+# LOGGED-IN FACULTY
+# ============================================================
+
+def get_logged_in_faculty():
+    if session.get("role") != "faculty":
+        return None
+
+    conn = get_db_connection()
+
+    try:
+        faculty_columns = get_table_columns("faculty")
+
+        if "username" not in faculty_columns:
+            return None
+
+        return conn.execute(
+            """
+            SELECT *
+            FROM faculty
+            WHERE username = ?
+            """,
+            (session.get("username"),)
+        ).fetchone()
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# LOGGED-IN STUDENT
+# ============================================================
+
+def get_logged_in_student():
+    if session.get("role") != "student":
+        return None
+
+    conn = get_db_connection()
+
+    try:
+        return conn.execute(
+            """
+            SELECT *
+            FROM students
+            WHERE student_id = ?
+            """,
+            (session.get("username"),)
+        ).fetchone()
+
+    finally:
+        conn.close()
+
+
+
+# ============================================================
+# LOGIN
+# ============================================================
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        if not username or not password:
+            return render_template(
+                "login.html",
+                error="Please enter your username and password."
+            )
+
+        conn = get_db_connection()
+
+        try:
+            user = conn.execute(
+                """
+                SELECT *
+                FROM users
+                WHERE username = ?
+                """,
+                (username,)
+            ).fetchone()
+        finally:
+            conn.close()
+
+        if user is None:
+            return render_template(
+                "login.html",
+                error="Invalid username or password."
+            )
+
+        stored_password = user["password_hash"]
+        password_valid = False
+
+        # Verify hashed passwords.
+        try:
+            from werkzeug.security import check_password_hash
+
+            password_valid = check_password_hash(
+                stored_password,
+                password
+            )
+        except (ValueError, TypeError):
+            password_valid = False
+
+        # Legacy plain-text password compatibility.
+        if not password_valid and stored_password == password:
+            password_valid = True
+
+        if not password_valid:
+            return render_template(
+                "login.html",
+                error="Invalid username or password."
+            )
+
+        # Create a fresh session after successful authentication.
+        session.clear()
+        session["user_id"] = user["id"]
+        session["username"] = user["username"]
+        session["role"] = user["role"]
+
+        # Redirect based on user role.
+        if user["role"] == "admin":
+            return redirect(url_for("dashboard"))
+
+        elif user["role"] == "faculty":
+            return redirect(url_for("faculty_dashboard"))
+
+        elif user["role"] == "student":
+            return redirect(url_for("student_dashboard"))
+
+        # Clear the session if the role is not recognized.
+        session.clear()
+
+        return render_template(
+            "login.html",
+            error="Unknown user role."
+        )
+
+    return render_template("login.html")
+
+# ============================================================
+# LOGOUT
+# ============================================================
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+# ============================================================
+# HOME
+# ============================================================
+
+@app.route("/")
+def home():
+
+    if session.get("user_id"):
+        role = session.get("role")
+
+        if role == "admin":
+            return redirect(url_for("dashboard"))
+
+        if role == "faculty":
+            return redirect(url_for("faculty_dashboard"))
+
+        if role == "student":
+            return redirect(url_for("student_dashboard"))
+
+        session.clear()
+
+    return redirect(url_for("login"))
+
+
+# ============================================================
+# CAMERA CONFIGURATION
+# ============================================================
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+MODEL_DIR = os.path.join(BASE_DIR, "models")
+
+YUNET_MODEL_PATH = os.path.join(
+    MODEL_DIR,
+    "face_detection_yunet_2026may.onnx"
+)
+
+SFACE_MODEL_PATH = os.path.join(
+    MODEL_DIR,
+    "face_recognition_sface_2021dec.onnx"
+)
+
+FACE_SIMILARITY_THRESHOLD = 0.40
+
+CAMERA_MINUTES_BEFORE_CLASS = 5
+CAMERA_WINDOW_MINUTES = 25
+CAMERA_SESSION_MINUTES = 20
+
+_camera_detector = None
+_camera_recognizer = None
+
+
+def get_camera_models():
+    global _camera_detector, _camera_recognizer
+
+    if (
+        _camera_detector is not None
+        and _camera_recognizer is not None
+    ):
+        return _camera_detector, _camera_recognizer
+
+    if not os.path.isfile(YUNET_MODEL_PATH):
+        raise FileNotFoundError(
+            f"YuNet model not found: {YUNET_MODEL_PATH}"
+        )
+
+    if not os.path.isfile(SFACE_MODEL_PATH):
+        raise FileNotFoundError(
+            f"SFace model not found: {SFACE_MODEL_PATH}"
+        )
+
+    _camera_detector = cv2.FaceDetectorYN.create(
+        YUNET_MODEL_PATH,
+        "",
+        (640, 480),
+        0.9,
+        0.3,
+        5000
+    )
+
+    _camera_recognizer = cv2.FaceRecognizerSF.create(
+        SFACE_MODEL_PATH,
+        ""
+    )
+
+    return _camera_detector, _camera_recognizer
+
+
+# ============================================================
+# FACE EMBEDDINGS
+# ============================================================
+
+def load_enrolled_face_embeddings():
+
+    conn = get_db_connection()
+
+    try:
+        rows = conn.execute(
+            """
+            SELECT id, student_id, name, face_encoding
+            FROM students
+            WHERE face_encoding IS NOT NULL
+            ORDER BY student_id
+            """
+        ).fetchall()
+
+    finally:
+        conn.close()
+
+    enrolled = []
+
+    for row in rows:
+        try:
+            raw = row["face_encoding"]
+
+            if raw is None:
+                continue
+
+            embedding = np.frombuffer(
+                raw,
+                dtype=np.float32
+            ).copy()
+
+            norm = float(np.linalg.norm(embedding))
+
+            if embedding.size == 0 or norm == 0:
+                continue
+
+            embedding /= norm
+
+            enrolled.append({
+                "database_id": row["id"],
+                "student_id": row["student_id"],
+                "name": row["name"],
+                "embedding": embedding
+            })
+
+        except (TypeError, ValueError):
+            app.logger.warning(
+                "Skipping invalid student face encoding."
+            )
+
+    return enrolled
+
+
+def browser_face_position(face, frame_width):
+
+    x = float(face[0])
+    face_width = float(face[2])
+
+    center_ratio = (
+        x + face_width / 2.0
+    ) / float(frame_width)
+
+    if center_ratio < 0.35:
+        return "LEFT"
+
+    if center_ratio > 0.65:
+        return "RIGHT"
+
+    return "CENTER"
+
+
+# ============================================================
+# TIME HELPERS
+# ============================================================
+
+def _time_value(value):
+
+    if not value:
+        return None
+
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(
+                str(value).strip(),
+                fmt
+            ).time()
+
+        except ValueError:
+            pass
+
+    return None
+
+
+def get_camera_window_for_class(
+    timetable_row,
+    selected_date=None
+):
+
+    if timetable_row is None:
+        return None
+
+    selected_date = (
+        selected_date or date.today().isoformat()
+    )
+
+    try:
+        class_date = date.fromisoformat(selected_date)
+
+    except (TypeError, ValueError):
+        return None
+
+    aliases = {
+        item.lower()
+        for item in get_day_aliases(selected_date)
+    }
+
+    if (
+        str(timetable_row["day"] or "").strip().lower()
+        not in aliases
+    ):
+        return None
+
+    start_time = _time_value(
+        timetable_row["start_time"]
+    )
+
+    if start_time is None:
+        return None
+
+    class_start = datetime.combine(
+        class_date,
+        start_time
+    )
+
+    window_start = class_start - timedelta(
+        minutes=CAMERA_MINUTES_BEFORE_CLASS
+    )
+
+    window_end = window_start + timedelta(
+        minutes=CAMERA_WINDOW_MINUTES
+    )
+
+    return {
+        "start": window_start,
+        "end": window_end,
+        "start_text": window_start.strftime("%H:%M"),
+        "end_text": window_end.strftime("%H:%M")
+    }
+
+
+def get_current_timetable_class(now=None):
+
+    now = now or datetime.now()
+
+    aliases = DAY_ALIASES.get(
+        now.strftime("%a"),
+        []
+    )
+
+    if not aliases:
+        return None
+
+    placeholders = ",".join("?" for _ in aliases)
+
+    conn = get_db_connection()
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT *
+            FROM timetable
+            WHERE lower(trim(day)) IN ({placeholders})
+              AND (active = 1 OR active IS NULL)
+            ORDER BY start_time
+            """,
+            tuple(item.lower() for item in aliases)
+        ).fetchall()
+
+        for row in rows:
+
+            window = get_camera_window_for_class(
+                row,
+                now.date().isoformat()
+            )
+
+            if (
+                window
+                and window["start"] <= now < window["end"]
+            ):
+                item = dict(row)
+
+                item["camera_start_time"] = (
+                    window["start_text"]
+                )
+
+                item["camera_end_time"] = (
+                    window["end_text"]
+                )
+
+                item["camera_window_start"] = (
+                    window["start"]
+                )
+
+                item["camera_window_end"] = (
+                    window["end"]
+                )
+
+                return item
+
+        return None
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# CLASS STUDENTS
+# ============================================================
+
+def get_class_students(conn, timetable_row):
+
+    students = conn.execute(
+        """
+        SELECT id, student_id, name, department, year, section
+        FROM students
+        ORDER BY student_id
+        """
+    ).fetchall()
+
+    def norm(value):
+        return str(value or "").strip().casefold()
+
+    filters = [
+        (field, norm(timetable_row[field]))
+        for field in ("department", "year", "section")
+        if (
+            field in timetable_row.keys()
+            and norm(timetable_row[field])
+        )
+    ]
+
+    if not filters:
+        return students
+
+    return [
+        student
+        for student in students
+        if all(
+            norm(student[field]) == expected
+            for field, expected in filters
+        )
+    ]
+
+
+# ============================================================
+# CLASS ATTENDANCE ROWS
+# ============================================================
+
+
+
+def _class_attendance_rows(conn, timetable_row, selected_date):
+    """
+    Return the selected class roster with attendance details.
+    Students without attendance records are shown as Absent.
+    """
+
+    students = get_class_students(conn, timetable_row)
+    student_columns = get_table_columns("students")
+
+    rows = []
+
+    subject_name = timetable_subject(timetable_row)
+    faculty_name = (
+        timetable_row["faculty_name"]
+        if "faculty_name" in timetable_row.keys()
+        and timetable_row["faculty_name"]
+        else (
+            timetable_row["faculty"]
+            if "faculty" in timetable_row.keys()
+            else "-"
+        )
+    )
+
+    for student in students:
+        attendance = conn.execute(
+            """
+            SELECT status, time, confidence
+            FROM attendance
+            WHERE student_id = ?
+              AND timetable_id = ?
+              AND date = ?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (
+                student["id"],
+                timetable_row["id"],
+                selected_date
+            )
+        ).fetchone()
+
+        email = "-"
+
+        if "email" in student_columns:
+            email_row = conn.execute(
+                """
+                SELECT email
+                FROM students
+                WHERE id = ?
+                """,
+                (student["id"],)
+            ).fetchone()
+
+            if email_row and email_row["email"]:
+                email = email_row["email"]
+
+        student_code = student["student_id"] or "-"
+        student_name = student["name"] or "-"
+
+        rows.append({
+            "id": student["id"],
+            "student_database_id": student["id"],
+
+            "student_id": student_code,
+            "student_code": student_code,
+
+            "name": student_name,
+            "student_name": student_name,
+            "email": email,
+
+            "timetable_id": timetable_row["id"],
+            "subject_name": subject_name,
+            "course_code": (
+                timetable_row["course_code"]
+                if "course_code" in timetable_row.keys()
+                else ""
+            ),
+            "faculty_name": faculty_name,
+            "start_time": (
+                timetable_row["start_time"]
+                if "start_time" in timetable_row.keys()
+                else ""
+            ),
+            "end_time": (
+                timetable_row["end_time"]
+                if "end_time" in timetable_row.keys()
+                else ""
+            ),
+            "room_no": timetable_room(timetable_row),
+            "date": selected_date,
+
+            "time": (
+                attendance["time"]
+                if attendance and attendance["time"]
+                else ""
+            ),
+            "status": (
+                attendance["status"]
+                if attendance and attendance["status"]
+                else "Absent"
+            ),
+            "confidence": (
+                attendance["confidence"]
+                if attendance
+                else None
+            )
+        })
+
+    rows.sort(
+        key=lambda row: (
+            0 if str(row["status"]).strip().lower() == "absent" else 1,
+            str(row["student_id"]).casefold()
+        )
+    )
+
+    return rows
+
+
+
+# ============================================================
+# FINALIZE CAMERA ATTENDANCE
+# ============================================================
+
+def finalize_class_attendance(
+    timetable_id,
+    selected_date,
+    session_end=None
+):
+
+    if selected_date != date.today().isoformat():
+        return {
+            "success": False,
+            "message": (
+                "Automatic finalization is only available "
+                "for today's session."
+            )
+        }, 400
+
+    conn = get_db_connection()
+
+    try:
+        timetable = conn.execute(
+            """
+            SELECT *
+            FROM timetable
+            WHERE id = ?
+              AND (active = 1 OR active IS NULL)
+            """,
+            (timetable_id,)
+        ).fetchone()
+
+        if timetable is None:
+            return {
+                "success": False,
+                "message": (
+                    "The selected timetable class was not found "
+                    "or is inactive."
+                )
+            }, 404
+
+        window = get_camera_window_for_class(
+            timetable,
+            selected_date
+        )
+
+        if window is None:
+            return {
+                "success": False,
+                "message": (
+                    "This class is not scheduled on the selected date."
+                )
+            }, 400
+
+        if datetime.now() < window["end"]:
+            return {
+                "success": False,
+                "message": (
+                    f"Attendance can be finalized at "
+                    f"{window['end_text']}."
+                ),
+                "finalize_at": window["end_text"]
+            }, 409
+
+        absent_added = 0
+
+        for student in get_class_students(
+            conn,
+            timetable
+        ):
+
+            exists = conn.execute(
+                """
+                SELECT id
+                FROM attendance
+                WHERE student_id = ?
+                  AND timetable_id = ?
+                  AND date = ?
+                LIMIT 1
+                """,
+                (
+                    student["id"],
+                    timetable_id,
+                    selected_date
+                )
+            ).fetchone()
+
+            if exists:
+                continue
+
+            conn.execute(
+                """
+                INSERT INTO attendance
+                (
+                    student_id,
+                    timetable_id,
+                    date,
+                    time,
+                    status,
+                    confidence
+                )
+                VALUES (?, ?, ?, ?, 'Absent', NULL)
+                """,
+                (
+                    student["id"],
+                    timetable_id,
+                    selected_date,
+                    finalize_at.strftime("%H:%M:%S")
+                )
+            )
+
+            absent_added += 1
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "message": "Attendance finalized.",
+            "timetable_id": int(timetable_id),
+            "date": selected_date,
+            "finalized_at": window["end"].strftime("%H:%M:%S"),
+            "absent_added": absent_added,
+            "records": _class_attendance_rows(
+                conn,
+                timetable,
+                selected_date
+            )
+        }, 200
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# MARK BROWSER ATTENDANCE
+# ============================================================
+
+def mark_browser_attendance(
+    student_database_id,
+    timetable_id,
+    similarity
+):
+
+    now = datetime.now()
+
+    attendance_date = now.strftime("%Y-%m-%d")
+    attendance_time = now.strftime("%H:%M:%S")
+
+    conn = get_db_connection()
+
+    try:
+        existing = conn.execute(
+            """
+            SELECT status
+            FROM attendance
+            WHERE student_id = ?
+              AND timetable_id = ?
+              AND date = ?
+            LIMIT 1
+            """,
+            (
+                student_database_id,
+                timetable_id,
+                attendance_date
+            )
+        ).fetchone()
+
+        if existing:
+            return {
+                "message": (
+                    "Attendance was already marked for this class today."
+                ),
+                "status": existing["status"],
+                "already_marked": True
+            }
+
+        timetable_columns = get_table_columns("timetable")
+
+        status = "Present"
+
+        if "late_after" in timetable_columns:
+
+            late_row = conn.execute(
+                """
+                SELECT late_after
+                FROM timetable
+                WHERE id = ?
+                """,
+                (timetable_id,)
+            ).fetchone()
+
+            if late_row and late_row["late_after"]:
+                try:
+                    hour, minute = map(
+                        int,
+                        late_row["late_after"].split(":")[:2]
+                    )
+
+                    if now.hour * 60 + now.minute > hour * 60 + minute:
+                        status = "Late"
+
+                except (ValueError, AttributeError):
+                    app.logger.warning(
+                        "Invalid late_after value for timetable %s",
+                        timetable_id
+                    )
+
+        conn.execute(
+            """
+            INSERT INTO attendance
+            (
+                student_id,
+                timetable_id,
+                date,
+                time,
+                status,
+                confidence
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                student_database_id,
+                timetable_id,
+                attendance_date,
+                attendance_time,
+                status,
+                float(similarity)
+            )
+        )
+
+        conn.commit()
+
+        return {
+            "message": "Attendance marked successfully.",
+            "status": status,
+            "already_marked": False
+        }
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# CAMERA START PAGE
+# ============================================================
+
+@app.route("/start-attendance")
+@role_required("admin")
+def start_attendance_page():
+
+    return render_template(
+        "start_attendance.html",
+        camera_window_minutes=CAMERA_WINDOW_MINUTES
+    )
+
+
+# ============================================================
+# CAMERA START API
+# ============================================================
+
+@app.route(
+    "/api/attendance/camera/start",
+    methods=["POST"]
+)
+@role_required("admin")
+def browser_camera_start():
+
+    # Prevent accidentally replacing an active session.
+    if session.get("camera_session_active"):
+        try:
+            existing_end = datetime.fromisoformat(
+                session.get("camera_session_end", "")
+            )
+
+            if datetime.now() < existing_end:
+                return jsonify({
+                    "success": False,
+                    "message": (
+                        "A camera attendance session is already active."
+                    ),
+                    "timetable_id": session.get(
+                        "camera_timetable_id"
+                    ),
+                    "session_end": existing_end.isoformat()
+                }), 409
+
+        except (TypeError, ValueError):
+            pass
+
+        # Expired or invalid session
+        session["camera_session_active"] = False
+
+    # Find the timetable class scheduled right now.
+    current_class = get_current_timetable_class()
+
+    if not current_class:
+        return jsonify({
+            "success": False,
+            "message": (
+                "No class is currently scheduled for attendance. "
+                "Please start during a scheduled class window."
+            )
+        }), 409
+
+    try:
+        get_camera_models()
+        enrolled = load_enrolled_face_embeddings()
+
+        if not enrolled:
+            return jsonify({
+                "success": False,
+                "message": (
+                    "No enrolled face encodings were found."
+                )
+            }), 400
+
+    except Exception:
+        app.logger.exception(
+            "Unable to initialize browser camera attendance"
+        )
+
+        return jsonify({
+            "success": False,
+            "message": (
+                "Camera attendance could not initialize. "
+                "Check the model files and server logs."
+            )
+        }), 500
+
+    # Lock the selected timetable class for this session.
+    session_start = datetime.now()
+    session_end = session_start + timedelta(minutes=20)
+
+    session["camera_session_active"] = True
+    session["camera_timetable_id"] = int(current_class["id"])
+    session["camera_session_date"] = session_start.date().isoformat()
+    session["camera_session_start"] = session_start.isoformat()
+    session["camera_session_end"] = session_end.isoformat()
+
+    return jsonify({
+        "success": True,
+        "message": (
+            "Camera attendance started. "
+            "The selected class is locked for 20 minutes."
+        ),
+        "class_name": current_class.get("class_name") or "",
+        "subject": (
+            current_class.get("subject_name")
+            or current_class.get("subject")
+            or ""
+        ),
+        "has_active_class": True,
+        "timetable_id": int(current_class["id"]),
+        "camera_start_time": session_start.strftime("%H:%M:%S"),
+        "camera_end_time": session_end.strftime("%H:%M:%S"),
+        "session_start": session_start.isoformat(),
+        "session_end": session_end.isoformat(),
+        "duration_minutes": 20
+    })
+
+# ============================================================
+# CAMERA SCHEDULE API
+# ============================================================
+
+@app.route("/api/attendance/camera/schedule")
+@role_required("admin")
+def browser_camera_schedule():
+
+    current_class = get_current_timetable_class()
+
+    if not current_class:
+        return jsonify({
+            "success": True,
+            "has_active_class": False,
+            "message": (
+                "Outside a scheduled attendance window."
+            )
+        })
+
+    return jsonify({
+        "success": True,
+        "has_active_class": True,
+        "timetable_id": current_class["id"],
+        "class_name": current_class.get("class_name") or "",
+        "subject": (
+            current_class.get("subject_name")
+            or current_class.get("subject")
+            or "-"
+        ),
+        "faculty": (
+            current_class.get("faculty_name")
+            or current_class.get("faculty")
+            or "-"
+        ),
+        "start_time": current_class.get("start_time") or "",
+        "end_time": current_class.get("end_time") or "",
+        "camera_start_time": current_class["camera_start_time"],
+        "camera_end_time": current_class["camera_end_time"],
+        "date": date.today().isoformat()
+    })
+
+
+
+# ============================================================
+# CAMERA FINALIZE API
+# ============================================================
+
+@app.route(
+    "/api/attendance/camera/finalize",
+    methods=["POST"]
+)
+@role_required("admin")
+def browser_camera_finalize():
+
+    locked_timetable_id = session.get("camera_timetable_id")
+    session_date = session.get("camera_session_date")
+    session_end_text = session.get("camera_session_end")
+
+    if not all([
+        locked_timetable_id,
+        session_date,
+        session_end_text
+    ]):
+        return jsonify({
+            "success": False,
+            "message": (
+                "No valid camera session was found. "
+                "Please start attendance first."
+            )
+        }), 400
+
+    payload = request.get_json(silent=True) or {}
+
+    # Do not allow the browser to finalize a different class.
+    try:
+        requested_timetable_id = int(
+            payload.get("timetable_id")
+        )
+    except (TypeError, ValueError):
+        requested_timetable_id = None
+
+    if requested_timetable_id != int(locked_timetable_id):
+        return jsonify({
+            "success": False,
+            "message": (
+                "The requested class does not match "
+                "the active camera session."
+            )
+        }), 400
+
+    selected_date = str(
+        payload.get("date") or date.today().isoformat()
+    )
+
+    if selected_date != session_date:
+        return jsonify({
+            "success": False,
+            "message": (
+                "The requested date does not match "
+                "the camera session date."
+            )
+        }), 400
+
+    if selected_date != date.today().isoformat():
+        return jsonify({
+            "success": False,
+            "message": "Only today's camera session can be finalized."
+        }), 400
+
+    try:
+        session_end = datetime.fromisoformat(session_end_text)
+    except (TypeError, ValueError):
+        return jsonify({
+            "success": False,
+            "message": "The camera session end time is invalid."
+        }), 400
+
+    if datetime.now() < session_end:
+        return jsonify({
+            "success": False,
+            "message": (
+                "The 20-minute attendance session is still running."
+            ),
+            "finalize_at": session_end.strftime("%H:%M:%S")
+        }), 409
+
+    result, status_code = finalize_class_attendance(
+        int(locked_timetable_id),
+        selected_date,
+        session_end=session_end
+    )
+
+    if status_code == 200 and result.get("success"):
+        session["camera_session_active"] = False
+        session["camera_session_finalized"] = True
+
+    return jsonify(result), status_code
+
+# ============================================================
+# CAMERA FRAME API
+# ============================================================
+
+@app.route(
+    "/api/attendance/camera/frame",
+    methods=["POST"]
+)
+@role_required("admin")
+def browser_camera_frame():
+
+    # Verify that a session is active and has a locked class.
+    if not session.get("camera_session_active", False):
+        return jsonify({
+            "success": False,
+            "message": "Start a camera session first."
+        }), 400
+
+    timetable_id = session.get("camera_timetable_id")
+    session_date = session.get("camera_session_date")
+    session_start_text = session.get("camera_session_start")
+    session_end_text = session.get("camera_session_end")
+
+    if not all([
+        timetable_id,
+        session_date,
+        session_start_text,
+        session_end_text
+    ]):
+        session["camera_session_active"] = False
+
+        return jsonify({
+            "success": False,
+            "message": (
+                "Camera session information is incomplete. "
+                "Please start a new session."
+            )
+        }), 400
+
+    try:
+        session_start = datetime.fromisoformat(
+            session_start_text
+        )
+        session_end = datetime.fromisoformat(
+            session_end_text
+        )
+    except (TypeError, ValueError):
+        session["camera_session_active"] = False
+
+        return jsonify({
+            "success": False,
+            "message": "Invalid camera session timestamps."
+        }), 400
+
+    now = datetime.now()
+
+    # This endpoint supports today's attendance only.
+    if session_date != date.today().isoformat():
+        session["camera_session_active"] = False
+
+        return jsonify({
+            "success": False,
+            "message": (
+                "This session is no longer valid for today's date."
+            )
+        }), 410
+
+    # Reject frames before the session starts or after it expires.
+    if now < session_start:
+        return jsonify({
+            "success": False,
+            "message": "The camera session has not started yet."
+        }), 409
+
+    if now >= session_end:
+        session["camera_session_active"] = False
+
+        return jsonify({
+            "success": False,
+            "state": "session_expired",
+            "message": (
+                "The 20-minute attendance session has ended. "
+                "Finalize attendance now."
+            ),
+            "timetable_id": int(timetable_id)
+        }), 410
+
+    # Decode the camera frame.
+    payload = request.get_json(silent=True) or {}
+    image_data = payload.get("image", "")
+
+    if not image_data:
+        return jsonify({
+            "success": False,
+            "message": "No camera image was received."
+        }), 400
+
+    try:
+        if "," in image_data:
+            image_data = image_data.split(",", 1)[1]
+
+        image_bytes = base64.b64decode(
+            image_data,
+            validate=True
+        )
+
+        frame = cv2.imdecode(
+            np.frombuffer(image_bytes, dtype=np.uint8),
+            cv2.IMREAD_COLOR
+        )
+
+        if frame is None:
+            return jsonify({
+                "success": False,
+                "message": (
+                    "The camera image could not be decoded."
+                )
+            }), 400
+
+        detector, recognizer = get_camera_models()
+
+        height, width = frame.shape[:2]
+        detector.setInputSize((width, height))
+
+        _, faces = detector.detect(frame)
+
+        if faces is None or len(faces) == 0:
+            return jsonify({
+                "success": True,
+                "state": "no_face",
+                "message": (
+                    "No face detected. Please look toward the camera."
+                )
+            })
+
+        # Process the largest detected face in this frame.
+        face = max(
+            faces,
+            key=lambda item: float(item[2] * item[3])
+        )
+
+        aligned = recognizer.alignCrop(frame, face)
+        feature = recognizer.feature(aligned).flatten()
+
+        feature_norm = float(np.linalg.norm(feature))
+
+        if feature_norm == 0:
+            return jsonify({
+                "success": True,
+                "state": "unrecognized",
+                "message": (
+                    "Could not extract a usable face feature."
+                )
+            })
+
+        feature /= feature_norm
+
+        enrolled = load_enrolled_face_embeddings()
+
+        best_student = None
+        best_similarity = -1.0
+
+        for student in enrolled:
+            if student["embedding"].shape != feature.shape:
+                continue
+
+            similarity = float(
+                np.dot(feature, student["embedding"])
+            )
+
+            if similarity > best_similarity:
+                best_student = student
+                best_similarity = similarity
+
+        if (
+            best_student is None
+            or best_similarity < FACE_SIMILARITY_THRESHOLD
+        ):
+            return jsonify({
+                "success": True,
+                "state": "unrecognized",
+                "message": (
+                    "Face not recognized. Please try again."
+                )
+            })
+
+        # Recheck expiry immediately before writing attendance.
+        now = datetime.now()
+
+        if now >= session_end:
+            session["camera_session_active"] = False
+
+            return jsonify({
+                "success": False,
+                "state": "session_expired",
+                "message": (
+                    "The 20-minute attendance session has ended."
+                ),
+                "timetable_id": int(timetable_id)
+            }), 410
+
+        # IMPORTANT: use the class locked at session start.
+        # Do not call get_current_timetable_class() here.
+        result = mark_browser_attendance(
+            best_student["database_id"],
+            int(timetable_id),
+            best_similarity
+        )
+
+        return jsonify({
+            "success": True,
+            "state": "marked",
+            "message": result["message"],
+            "name": best_student["name"],
+            "roll_number": best_student["student_id"],
+            "status": result["status"],
+            "similarity": round(best_similarity, 3),
+            "already_marked": result["already_marked"],
+            "timetable_id": int(timetable_id),
+            "session_end": session_end.isoformat()
+        })
+
+    except Exception:
+        app.logger.exception(
+            "Browser camera frame processing failed"
+        )
+
+        return jsonify({
+            "success": False,
+            "message": (
+                "Unable to process this camera frame. "
+                "Check the server logs."
+            )
+        }), 500
+
+# ============================================================
+# ADMIN DASHBOARD
+# ============================================================
+
+@app.route("/admin")
+@role_required("admin")
+def dashboard():
+
+    conn = get_db_connection()
+
+    try:
+        student_count = conn.execute(
+            "SELECT COUNT(*) AS count FROM students"
+        ).fetchone()["count"]
+
+        faculty_count = conn.execute(
+            "SELECT COUNT(*) AS count FROM faculty"
+        ).fetchone()["count"]
+
+        timetable_count = conn.execute(
+            "SELECT COUNT(*) AS count FROM timetable"
+        ).fetchone()["count"]
+
+        attendance_count = conn.execute(
+            "SELECT COUNT(*) AS count FROM attendance"
+        ).fetchone()["count"]
+
+    finally:
+        conn.close()
+
+    return render_template(
+        "dashboard.html",
+        student_count=student_count,
+        faculty_count=faculty_count,
+        timetable_count=timetable_count,
+        attendance_count=attendance_count
+    )
+
+
+# ============================================================
+# ADMIN STUDENTS
+# ============================================================
+
+
+@app.route("/admin/students")
+@role_required("admin")
+def admin_students():
+    conn = get_db_connection()
+    try:
+        students = conn.execute("""
+            SELECT *
+            FROM students
+            WHERE active = 1
+            ORDER BY student_id
+        """).fetchall()
+    finally:
+        conn.close()
+
+    return render_template(
+        "students.html",
+        students=students,
+        username=session.get("username", "Admin"),
+        role=session.get("role", "admin")
+    )
+
+
+
+# ============================================================
+# ADMIN FACULTY
+# ============================================================
+
+@app.route("/admin/students/add", methods=["POST"])
+@role_required("admin")
+def add_student():
+    student_id = request.form.get("student_id", "").strip()
+    name = request.form.get("name", "").strip()
+    mobile = request.form.get("mobile", "").strip()
+    email = request.form.get("email", "").strip()
+    department = request.form.get("department", "").strip()
+    year_value = request.form.get("year", "").strip()
+    section = request.form.get("section", "").strip()
+    password = request.form.get("password", "")
+
+    if not all([student_id, name, password]):
+        flash("Roll number, name, and initial password are required.", "error")
+        return redirect(url_for("admin_students"))
+
+    if len(password) < 8:
+        flash("The initial password must be at least 8 characters.", "error")
+        return redirect(url_for("admin_students"))
+
+    year = None
+    if year_value:
+        try:
+            year = int(year_value)
+            if year < 1 or year > 6:
+                raise ValueError
+        except ValueError:
+            flash("Year must be a number between 1 and 6.", "error")
+            return redirect(url_for("admin_students"))
+
+    conn = get_db_connection()
+
+    try:
+        # Prevent duplicate student IDs or login usernames.
+        student_exists = conn.execute(
+            "SELECT id FROM students WHERE student_id = ?",
+            (student_id,)
+        ).fetchone()
+
+        user_exists = conn.execute(
+            "SELECT id FROM users WHERE username = ?",
+            (student_id,)
+        ).fetchone()
+
+        if student_exists:
+            flash("A student with that roll number already exists.", "error")
+            return redirect(url_for("admin_students"))
+
+        if user_exists:
+            flash(
+                "That username already exists. Check existing accounts first.",
+                "error"
+            )
+            return redirect(url_for("admin_students"))
+
+        # Create the student and login account as one transaction.
+        conn.execute("BEGIN")
+
+        conn.execute(
+            """
+            INSERT INTO students
+                (student_id, name, mobile, email, department, year, section)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (student_id, name, mobile, email, department, year, section)
+        )
+
+        conn.execute(
+            """
+            INSERT INTO users (username, password_hash, role)
+            VALUES (?, ?, 'student')
+            """,
+            (student_id, generate_password_hash(password))
+        )
+
+        conn.commit()
+        flash("Student and login account created successfully.", "success")
+
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        flash(
+            "Could not create the student because a duplicate or database constraint was detected.",
+            "error"
+        )
+
+    except Exception:
+        conn.rollback()
+        app.logger.exception("Failed to add student")
+        flash("An unexpected error occurred while adding the student.", "error")
+
+    finally:
+        conn.close()
+
+    return redirect(url_for("admin_students"))
+
+@app.route("/admin/students/edit/<int:student_db_id>", methods=["POST"])
+@role_required("admin")
+def edit_student(student_db_id):
+    name = request.form.get("name", "").strip()
+    mobile = request.form.get("mobile", "").strip()
+    email = request.form.get("email", "").strip()
+    department = request.form.get("department", "").strip()
+    year_value = request.form.get("year", "").strip()
+    section = request.form.get("section", "").strip()
+
+    if not name:
+        flash("Student name is required.", "error")
+        return redirect(url_for("admin_students"))
+
+    year = None
+    if year_value:
+        try:
+            year = int(year_value)
+            if year < 1 or year > 6:
+                raise ValueError
+        except ValueError:
+            flash("Year must be between 1 and 6.", "error")
+            return redirect(url_for("admin_students"))
+
+    conn = get_db_connection()
+    try:
+        student = conn.execute(
+            "SELECT id FROM students WHERE id = ?",
+            (student_db_id,)
+        ).fetchone()
+
+        if not student:
+            flash("Student not found.", "error")
+            return redirect(url_for("admin_students"))
+
+        conn.execute(
+            """
+            UPDATE students
+            SET name = ?, mobile = ?, email = ?,
+                department = ?, year = ?, section = ?
+            WHERE id = ?
+            """,
+            (name, mobile, email, department, year, section, student_db_id)
+        )
+        conn.commit()
+        flash("Student details updated successfully.", "success")
+
+    except sqlite3.Error:
+        conn.rollback()
+        app.logger.exception("Failed to edit student")
+        flash("Could not update student details.", "error")
+
+    finally:
+        conn.close()
+
+    return redirect(url_for("admin_students"))
+
+
+@app.route("/admin/students/remove/<int:student_db_id>", methods=["POST"])
+@role_required("admin")
+def remove_student(student_db_id):
+    conn = get_db_connection()
+
+    try:
+        student = conn.execute(
+            "SELECT id, student_id FROM students WHERE id = ?",
+            (student_db_id,)
+        ).fetchone()
+
+        if not student:
+            flash("Student not found.", "error")
+            return redirect(url_for("admin_students"))
+
+        # Keep student and attendance records; disable the account.
+        conn.execute("BEGIN")
+
+        conn.execute(
+            "UPDATE students SET active = 0 WHERE id = ?",
+            (student_db_id,)
+        )
+
+        conn.execute(
+            """
+            DELETE FROM users
+            WHERE username = ? AND role = 'student'
+            """,
+            (student["student_id"],)
+        )
+
+        conn.commit()
+        flash(
+            "Student removed from active management. Attendance history was preserved.",
+            "success"
+        )
+
+    except sqlite3.Error:
+        conn.rollback()
+        app.logger.exception("Failed to remove student")
+        flash("Could not remove the student.", "error")
+
+    finally:
+        conn.close()
+
+    return redirect(url_for("admin_students"))
+
+@app.route("/admin/faculty")
+@role_required("admin")
+def admin_faculty():
+
+    conn = get_db_connection()
+
+    try:
+        faculty_members = conn.execute(
+            """
+            SELECT *
+            FROM faculty
+            ORDER BY name
+            """
+        ).fetchall()
+
+    finally:
+        conn.close()
+
+    # This template matches the Faculty Management HTML
+    # you shared in the previous message.
+    return render_template(
+        "faculty_management.html",
+        faculty_members=faculty_members,
+        username=session.get("username", "Admin"),
+        role=session.get("role", "admin")
+    )
+
+
+# ============================================================
+# ADMIN TIMETABLE
+# ============================================================
+
+@app.route("/admin/timetable")
+@role_required("admin")
+def admin_timetable():
+
+    conn = get_db_connection()
+
+    try:
+        timetable = conn.execute(
+            """
+            SELECT *
+            FROM timetable
+            ORDER BY
+                CASE lower(trim(day))
+                    WHEN 'mon' THEN 1
+                    WHEN 'monday' THEN 1
+                    WHEN 'tue' THEN 2
+                    WHEN 'tuesday' THEN 2
+                    WHEN 'wed' THEN 3
+                    WHEN 'wednesday' THEN 3
+                    WHEN 'thu' THEN 4
+                    WHEN 'thursday' THEN 4
+                    WHEN 'fri' THEN 5
+                    WHEN 'friday' THEN 5
+                    WHEN 'sat' THEN 6
+                    WHEN 'saturday' THEN 6
+                    WHEN 'sun' THEN 7
+                    WHEN 'sunday' THEN 7
+                    ELSE 8
+                END,
+                start_time
+            """
+        ).fetchall()
+
+    finally:
+        conn.close()
+
+    return render_template(
+        "timetable.html",
+        timetable=timetable
+    )
+
+
+
+
+
+# ============================================================
+# STUDENT DASHBOARD
+# ============================================================
+
+@app.route("/student")
+@role_required("student")
+def student_dashboard():
+    from datetime import datetime, timedelta
+
+    student = get_logged_in_student()
+
+    if student is None:
+        session.clear()
+        return redirect(url_for("login"))
+
+    today = date.today()
+    now_time = datetime.now().time()
+
+    # --------------------------------------------------------
+    # VALIDATE SELECTED DATE
+    # --------------------------------------------------------
+    selected_date = request.args.get("date", today.isoformat())
+
+    try:
+        selected = date.fromisoformat(selected_date)
+        selected_date = selected.isoformat()
+    except (TypeError, ValueError):
+        selected = today
+        selected_date = today.isoformat()
+
+    display_date = selected.strftime("%d/%m/%Y")
+
+    # --------------------------------------------------------
+    # ATTENDANCE PERIOD
+    # --------------------------------------------------------
+    overall_start = date(2026, 7, 6)
+    overall_end = date(2026, 11, 2)
+
+    # Do not count future classes in attendance statistics.
+    calculation_end = min(overall_end, today)
+
+    month_start = selected.replace(day=1)
+    monthly_start = max(month_start, overall_start)
+    monthly_end = min(selected, overall_end, today)
+
+    # --------------------------------------------------------
+    # OPEN DATABASE
+    # --------------------------------------------------------
+    conn = get_db_connection()
+
+    try:
+        # ----------------------------------------------------
+        # LOAD TIMETABLE ROWS FOR ALL REQUIRED DATES
+        # ----------------------------------------------------
+        timetable_by_day = {}
+
+        current_day = min(
+            overall_start,
+            monthly_start,
+            selected
+        )
+
+        data_end = max(
+            calculation_end,
+            monthly_end,
+            selected
+        )
+
+        while current_day <= data_end:
+            day_key = current_day.isoformat()
+
+            aliases = {
+                str(item).strip().lower()
+                for item in get_day_aliases(day_key)
+                if str(item).strip()
+            }
+
+            if aliases:
+                placeholders = ",".join("?" for _ in aliases)
+
+                rows = conn.execute(
+                    f"""
+                    SELECT *
+                    FROM timetable
+                    WHERE lower(trim(day)) IN ({placeholders})
+                      AND (active = 1 OR active IS NULL)
+                    ORDER BY start_time
+                    """,
+                    tuple(sorted(aliases))
+                ).fetchall()
+
+                timetable_by_day[day_key] = [
+                    dict(row) for row in rows
+                ]
+            else:
+                timetable_by_day[day_key] = []
+
+            current_day += timedelta(days=1)
+
+        # ----------------------------------------------------
+        # LOAD ATTENDANCE RECORDS
+        # ----------------------------------------------------
+        attendance_rows = conn.execute(
+            """
+            SELECT
+                rowid AS attendance_rowid,
+                date,
+                timetable_id,
+                status,
+                time
+            FROM attendance
+            WHERE student_id = ?
+              AND date >= ?
+              AND date <= ?
+            ORDER BY date, timetable_id, rowid
+            """,
+            (
+                student["id"],
+                overall_start.isoformat(),
+                overall_end.isoformat()
+            )
+        ).fetchall()
+
+        attendance_by_key = {}
+
+        # If duplicate records exist, the last row is retained.
+        for record in attendance_rows:
+            key = (
+                record["date"],
+                record["timetable_id"]
+            )
+            attendance_by_key[key] = dict(record)
+
+        # ----------------------------------------------------
+        # ATTENDANCE HELPERS
+        # ----------------------------------------------------
+        def is_present(status):
+            return str(status or "").strip().lower() in (
+                "present",
+                "late"
+            )
+
+        def class_has_finished(class_date, timetable_row):
+            """Return True only when the scheduled class has ended."""
+            if class_date < today:
+                return True
+
+            if class_date > today:
+                return False
+
+            end_value = str(
+                timetable_row.get("end_time") or ""
+            ).strip()
+
+            if not end_value:
+                return False
+
+            parsed_end = None
+
+            for time_format in ("%H:%M:%S", "%H:%M"):
+                try:
+                    parsed_end = datetime.strptime(
+                        end_value,
+                        time_format
+                    ).time()
+                    break
+                except ValueError:
+                    continue
+
+            if parsed_end is None:
+                return False
+
+            return parsed_end <= now_time
+
+        def prepare_class(timetable_row, class_date):
+            """Add attendance and display fields to a timetable row."""
+            item = dict(timetable_row)
+
+            timetable_id = item.get("id")
+            key = (class_date.isoformat(), timetable_id)
+            record = attendance_by_key.get(key)
+
+            if record is not None:
+                item["status"] = (
+                    record.get("status") or "Not marked"
+                )
+                item["time"] = record.get("time") or ""
+            elif class_has_finished(class_date, item):
+                item["status"] = "Absent"
+                item["time"] = ""
+            else:
+                item["status"] = "Not marked"
+                item["time"] = ""
+
+            item["subject"] = (
+                item.get("subject_name")
+                or item.get("subject")
+                or item.get("course_code")
+                or item.get("class_name")
+                or "Class"
+            )
+
+            item["class_name"] = (
+                item.get("class_name")
+                or item.get("subject_name")
+                or item.get("subject")
+                or item.get("course_code")
+                or "Class"
+            )
+
+            item["faculty_name"] = (
+                item.get("faculty_name")
+                or item.get("faculty")
+                or "-"
+            )
+
+            item["room"] = (
+                item.get("room")
+                or item.get("room_no")
+                or item.get("classroom")
+                or "-"
+            )
+
+            return item
+
+        # ----------------------------------------------------
+        # CALCULATE ATTENDANCE FOR A DATE RANGE
+        # ----------------------------------------------------
+        def calculate_period(period_start, period_end):
+            attended = 0
+            absent = 0
+            eligible_total = 0
+
+            if period_end < period_start:
+                return {
+                    "present": 0,
+                    "absent": 0,
+                    "total": 0,
+                    "percentage": 0.0
+                }
+
+            current = period_start
+
+            while current <= period_end:
+                day_key = current.isoformat()
+
+                scheduled_classes = timetable_by_day.get(
+                    day_key, []
+                )
+
+                for timetable_row in scheduled_classes:
+                    timetable_id = timetable_row.get("id")
+                    record = attendance_by_key.get(
+                        (day_key, timetable_id)
+                    )
+
+                    if record is not None:
+                        # A saved record is counted regardless of status.
+                        eligible_total += 1
+
+                        if is_present(record.get("status")):
+                            attended += 1
+                        else:
+                            absent += 1
+
+                    elif class_has_finished(
+                        current,
+                        timetable_row
+                    ):
+                        # Missing records count as absent only after
+                        # the class's scheduled end time.
+                        eligible_total += 1
+                        absent += 1
+
+                current += timedelta(days=1)
+
+            percentage = (
+                round(attended * 100.0 / eligible_total, 1)
+                if eligible_total
+                else 0.0
+            )
+
+            return {
+                "present": attended,
+                "absent": absent,
+                "total": eligible_total,
+                "percentage": percentage
+            }
+
+        # ----------------------------------------------------
+        # DAILY TIMETABLE
+        # ----------------------------------------------------
+        classes = [
+            prepare_class(row, selected)
+            for row in timetable_by_day.get(selected_date, [])
+        ]
+
+        daily_stats = calculate_period(selected, selected)
+
+        total_classes = len(classes)
+        present_count = daily_stats["present"]
+        absent_count = daily_stats["absent"]
+        day_eligible_total = daily_stats["total"]
+        day_percentage = daily_stats["percentage"]
+
+        # ----------------------------------------------------
+        # OVERALL ATTENDANCE
+        # 6 JULY 2026 THROUGH 2 NOVEMBER 2026
+        # ----------------------------------------------------
+        overall_stats = calculate_period(
+            overall_start,
+            calculation_end
+        )
+
+        overall_present = overall_stats["present"]
+        overall_absent = overall_stats["absent"]
+        overall_total = overall_stats["total"]
+        overall_percentage = overall_stats["percentage"]
+
+        overall_warning = (
+            overall_total == 0
+            or overall_percentage < 75
+        )
+
+        # ----------------------------------------------------
+        # MONTHLY ATTENDANCE
+        # MONTH START THROUGH SELECTED DATE
+        # ----------------------------------------------------
+        monthly_stats = calculate_period(
+            monthly_start,
+            monthly_end
+        )
+
+        monthly_present = monthly_stats["present"]
+        monthly_absent = monthly_stats["absent"]
+        monthly_total = monthly_stats["total"]
+        monthly_percentage = monthly_stats["percentage"]
+
+        monthly_warning = (
+            monthly_total == 0
+            or monthly_percentage < 75
+        )
+
+        # ----------------------------------------------------
+        # RENDER DASHBOARD
+        # ----------------------------------------------------
+        return render_template(
+            "student_dashboard.html",
+            student=student,
+            selected_date=selected_date,
+            display_date=display_date,
+            classes=classes,
+
+            # Daily statistics
+            total_classes=total_classes,
+            present_count=present_count,
+            absent_count=absent_count,
+            day_eligible_total=day_eligible_total,
+            day_percentage=day_percentage,
+
+            # Overall statistics
+            overall_start=overall_start.isoformat(),
+            overall_end=overall_end.isoformat(),
+            overall_start_date=overall_start.isoformat(),
+            overall_end_date=overall_end.isoformat(),
+            overall_present=overall_present,
+            overall_absent=overall_absent,
+            overall_total=overall_total,
+            overall_percentage=overall_percentage,
+            overall_warning=overall_warning,
+
+            # Monthly statistics
+            monthly_present=monthly_present,
+            monthly_absent=monthly_absent,
+            monthly_total=monthly_total,
+            monthly_percentage=monthly_percentage,
+            monthly_warning=monthly_warning,
+
+            active_page="dashboard"
+        )
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# FACULTY HELPERS
+# ============================================================
+
+def faculty_identity():
+    faculty = get_logged_in_faculty()
+
+    if faculty is None:
+        return None, "", session.get("username", "")
+
+    return (
+        faculty,
+        str(faculty["name"] or "").strip(),
+        str(faculty["username"] or "").strip()
+    )
+
+
+def faculty_matches_timetable(timetable_row, faculty_name, username):
+    keys = timetable_row.keys()
+    assigned_values = []
+
+    for field in ("faculty_name", "faculty"):
+        if field in keys:
+            assigned_values.append(
+                str(timetable_row[field] or "").strip().casefold()
+            )
+
+    accepted = {
+        str(faculty_name or "").strip().casefold(),
+        str(username or "").strip().casefold()
+    }
+    accepted.discard("")
+
+    return any(
+        assigned and assigned in accepted
+        for assigned in assigned_values
+    )
+
+
+def timetable_subject(row):
+    keys = row.keys()
+
+    for field in (
+        "subject_name",
+        "subject",
+        "course_code",
+        "class_name"
+    ):
+        if field in keys and row[field]:
+            return row[field]
+
+    return "Class"
+
+
+def timetable_room(row):
+    keys = row.keys()
+
+    for field in ("room_no", "room", "classroom"):
+        if field in keys and row[field]:
+            return row[field]
+
+    return "-"
+
+
+def all_timetable_rows(conn):
+    return conn.execute(
+        """
+        SELECT *
+        FROM timetable
+        ORDER BY
+            CASE lower(trim(day))
+                WHEN 'mon' THEN 1 WHEN 'monday' THEN 1
+                WHEN 'tue' THEN 2 WHEN 'tuesday' THEN 2
+                WHEN 'wed' THEN 3 WHEN 'wednesday' THEN 3
+                WHEN 'thu' THEN 4 WHEN 'thursday' THEN 4
+                WHEN 'fri' THEN 5 WHEN 'friday' THEN 5
+                WHEN 'sat' THEN 6 WHEN 'saturday' THEN 6
+                WHEN 'sun' THEN 7 WHEN 'sunday' THEN 7
+                ELSE 8
+            END,
+            start_time
+        """
+    ).fetchall()
+
+
+def scheduled_classes_for_date(conn, selected_date):
+    try:
+        selected_day = (
+            date.fromisoformat(selected_date)
+            .strftime("%A")
+            .casefold()
+        )
+    except (ValueError, TypeError):
+        return []
+
+    day_aliases = {
+        "monday": ["monday", "mon"],
+        "tuesday": ["tuesday", "tue", "tues"],
+        "wednesday": ["wednesday", "wed"],
+        "thursday": ["thursday", "thu", "thur", "thurs"],
+        "friday": ["friday", "fri"],
+        "saturday": ["saturday", "sat"],
+        "sunday": ["sunday", "sun"],
+    }
+
+    aliases = day_aliases.get(selected_day, [])
+
+    if not aliases:
+        return []
+
+    placeholders = ",".join("?" for _ in aliases)
+
+    return conn.execute(
+        f"""
+        SELECT *
+        FROM timetable
+        WHERE lower(trim(day)) IN ({placeholders})
+          AND (active = 1 OR active IS NULL)
+        ORDER BY start_time
+        """,
+        tuple(aliases)
+    ).fetchall()
+
+
+
+
+
+# ============================================================
+# STUDENT TIMETABLE
+# ============================================================
+
+@app.route("/student/timetable")
+@role_required("student")
+def student_timetable():
+    student = get_logged_in_student()
+
+    if student is None:
+        session.clear()
+        return redirect(url_for("login"))
+
+    # Monday to Friday only
+    day_names = [
+        ("Monday", ["mon", "monday"]),
+        ("Tuesday", ["tue", "tuesday"]),
+        ("Wednesday", ["wed", "wednesday"]),
+        ("Thursday", ["thu", "thursday"]),
+        ("Friday", ["fri", "friday"]),
+    ]
+
+    # Internal slot times stay in 24-hour format for matching.
+    slots = [
+        ("09:30", "10:30"),
+        ("10:30", "11:30"),
+        ("11:30", "12:30"),
+        ("13:30", "14:30"),
+        ("14:30", "15:30"),
+        ("15:30", "16:30"),
+    ]
+
+    def to_minutes(value):
+        """Convert a database time to minutes after midnight."""
+        if not value:
+            return None
+
+        value = str(value).strip()
+
+        for fmt in ("%H:%M:%S", "%H:%M", "%I:%M %p"):
+            try:
+                parsed = datetime.strptime(value, fmt)
+                return parsed.hour * 60 + parsed.minute
+            except ValueError:
+                continue
+
+        return None
+
+    def format_time_12h(value):
+        """Display a database time in 12-hour format."""
+        if not value:
+            return "-"
+
+        value = str(value).strip()
+
+        for fmt in ("%H:%M:%S", "%H:%M", "%I:%M %p"):
+            try:
+                return datetime.strptime(value, fmt).strftime(
+                    "%I:%M %p"
+                ).lstrip("0")
+            except ValueError:
+                continue
+
+        return value
+
+    today_key = date.today().strftime("%A").lower()
+    conn = get_db_connection()
+
+    try:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM timetable
+            WHERE (active = 1 OR active IS NULL)
+            ORDER BY start_time
+            """
+        ).fetchall()
+
+        timetable = []
+
+        for row in rows:
+            item = dict(row)
+
+            # Keep the original values for correct grid placement.
+            item["start_time_raw"] = item.get("start_time")
+            item["end_time_raw"] = item.get("end_time")
+
+            item["start_minutes"] = to_minutes(
+                item["start_time_raw"]
+            )
+            item["end_minutes"] = to_minutes(
+                item["end_time_raw"]
+            )
+
+            item["display_start_time"] = format_time_12h(
+                item["start_time_raw"]
+            )
+            item["display_end_time"] = format_time_12h(
+                item["end_time_raw"]
+            )
+
+            item["display_subject"] = (
+                item.get("subject_name")
+                or item.get("subject")
+                or item.get("class_name")
+                or item.get("course_code")
+                or "Class"
+            )
+
+            item["display_faculty"] = (
+                item.get("faculty_name")
+                or item.get("faculty")
+                or "-"
+            )
+
+            item["display_room"] = (
+                item.get("room")
+                or item.get("room_no")
+                or item.get("classroom")
+                or "-"
+            )
+
+            timetable.append(item)
+
+        weekly_rows = []
+
+        for day_name, aliases in day_names:
+            day_classes = [
+                item for item in timetable
+                if str(item.get("day") or "").strip().lower()
+                in aliases
+            ]
+
+            # Build one grid cell per hour, except lunch.
+            cells = []
+            occupied = set()
+
+            for slot_index, (slot_start, slot_end) in enumerate(slots):
+                slot_start_min = to_minutes(slot_start)
+                slot_end_min = to_minutes(slot_end)
+
+                # Insert lunch after the third morning slot.
+                if slot_index == 3:
+                    cells.append({
+                        "is_lunch": True,
+                        "skip": False,
+                        "item": None,
+                        "colspan": 1,
+                    })
+
+                if slot_index in occupied:
+                    cells.append({
+                        "skip": True,
+                        "is_lunch": False,
+                        "item": None,
+                        "colspan": 1,
+                    })
+                    continue
+
+                # Find a class that starts in this slot.
+                matching = None
+
+                for item in day_classes:
+                    if (
+                        item["start_minutes"] is not None
+                        and item["end_minutes"] is not None
+                        and item["start_minutes"] == slot_start_min
+                        and item["end_minutes"] > slot_start_min
+                    ):
+                        matching = item
+                        break
+
+                if matching is None:
+                    # Avoid creating an empty cell for a class
+                    # that continues from the previous slot.
+                    continuing = any(
+                        item["start_minutes"] is not None
+                        and item["end_minutes"] is not None
+                        and item["start_minutes"] < slot_start_min
+                        and item["end_minutes"] > slot_start_min
+                        for item in day_classes
+                    )
+
+                    cells.append({
+                        "skip": continuing,
+                        "is_lunch": False,
+                        "item": None,
+                        "colspan": 1,
+                    })
+                    continue
+
+                class_end = matching["end_minutes"]
+
+                # Find the number of hourly slots covered by
+                # the class. Do not merge across the lunch break.
+                span = 1
+                current_index = slot_index
+
+                while current_index + 1 < len(slots):
+                    next_index = current_index + 1
+
+                    # The transition from 12:30 to 13:30 is lunch.
+                    if next_index == 3:
+                        break
+
+                    next_start, next_end = slots[next_index]
+                    next_start_min = to_minutes(next_start)
+                    next_end_min = to_minutes(next_end)
+
+                    if (
+                        next_start_min is None
+                        or next_end_min is None
+                        or class_end <= next_start_min
+                    ):
+                        break
+
+                    span += 1
+                    current_index = next_index
+
+                    if class_end <= next_end_min:
+                        break
+
+                # Don't let a class extend beyond the displayed grid.
+                if slot_index < 3:
+                    span = min(span, 3 - slot_index)
+                else:
+                    span = min(span, 6 - slot_index)
+
+                for covered_index in range(
+                    slot_index + 1,
+                    slot_index + span
+                ):
+                    occupied.add(covered_index)
+
+                cells.append({
+                    "skip": False,
+                    "is_lunch": False,
+                    "item": matching,
+                    "colspan": span,
+                })
+
+            weekly_rows.append({
+                "name": day_name,
+                "is_today": day_name.lower() == today_key,
+                "cells": cells,
+            })
+
+        return render_template(
+            "student_timetable.html",
+            student=student,
+            timetable=timetable,
+            weekly_rows=weekly_rows,
+        )
+
+    finally:
+        conn.close()
+
+# ============================================================
+# FACULTY DASHBOARD
+# ============================================================
+
+@app.route("/faculty")
+@app.route("/faculty/dashboard")
+@role_required("faculty")
+def faculty_dashboard():
+    faculty, faculty_name, username = faculty_identity()
+
+    if faculty is None:
+        flash("Faculty account not found.", "error")
+        return redirect(url_for("logout"))
+
+    today = date.today()
+    today_iso = today.isoformat()
+    now = datetime.now()
+
+    conn = get_db_connection()
+
+    try:
+        all_rows = all_timetable_rows(conn)
+
+        # Only timetable classes assigned to the logged-in faculty.
+        my_classes = [
+            dict(row)
+            for row in all_rows
+            if faculty_matches_timetable(
+                row, faculty_name, username
+            )
+        ]
+
+        def prepare_class(item):
+            item["subject_name"] = (
+                item.get("subject_name")
+                or item.get("subject")
+                or item.get("course_code")
+                or item.get("class_name")
+                or "Class"
+            )
+            item["room_no"] = (
+                item.get("room_no")
+                or item.get("room")
+                or item.get("classroom")
+                or "-"
+            )
+            return item
+
+        for item in my_classes:
+            prepare_class(item)
+
+        # Find this faculty's classes scheduled for today.
+        today_aliases = {
+            str(value).strip().lower()
+            for value in get_day_aliases(today_iso)
+        }
+
+        today_classes = [
+            item.copy()
+            for item in my_classes
+            if str(item.get("day") or "").strip().lower()
+            in today_aliases
+        ]
+
+        today_classes.sort(
+            key=lambda item: (
+                _time_value(item.get("start_time"))
+                or datetime.strptime("23:59", "%H:%M").time()
+            )
+        )
+
+        # Find the next class today; if none remains, find the
+        # next scheduled class on a future date.
+        next_class = None
+
+        for day_offset in range(0, 15):
+            candidate_date = today + timedelta(days=day_offset)
+            candidate_iso = candidate_date.isoformat()
+
+            day_aliases = {
+                str(value).strip().lower()
+                for value in get_day_aliases(candidate_iso)
+            }
+
+            day_classes = [
+                item.copy()
+                for item in my_classes
+                if str(item.get("day") or "").strip().lower()
+                in day_aliases
+            ]
+
+            day_classes.sort(
+                key=lambda item: (
+                    _time_value(item.get("start_time"))
+                    or datetime.strptime("23:59", "%H:%M").time()
+                )
+            )
+
+            for item in day_classes:
+                start_time = _time_value(item.get("start_time"))
+
+                if start_time is None:
+                    continue
+
+                class_datetime = datetime.combine(
+                    candidate_date, start_time
+                )
+
+                if class_datetime > now:
+                    next_class = prepare_class(item.copy())
+                    next_class["display_date"] = (
+                        "Today" if day_offset == 0
+                        else candidate_date.strftime("%A, %d %b %Y")
+                    )
+                    next_class["weekday"] = candidate_date.strftime("%A")
+                    break
+
+            if next_class:
+                break
+
+        # Count present/late records only for this faculty's classes.
+        my_timetable_ids = [
+            item["id"]
+            for item in my_classes
+            if item.get("id") is not None
+        ]
+
+        timetable_count = len(my_classes)
+        today_present = 0
+        total_attendance = 0
+        today_attendance_records = []
+
+        if my_timetable_ids:
+            placeholders = ",".join(
+                "?" for _ in my_timetable_ids
+            )
+
+            today_present = conn.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM attendance a
+                WHERE a.date = ?
+                  AND lower(trim(coalesce(a.status, '')))
+                      IN ('present', 'late')
+                  AND a.timetable_id IN ({placeholders})
+                """,
+                (today_iso, *my_timetable_ids)
+            ).fetchone()[0]
+
+            total_attendance = conn.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM attendance
+                WHERE timetable_id IN ({placeholders})
+                """,
+                tuple(my_timetable_ids)
+            ).fetchone()[0]
+
+            # Retrieve today's actual attendance rows for the
+            # dashboard table.
+            #
+            # The timetable row supplies subject and faculty details.
+            # The student row supplies the roll number and name.
+            rows = conn.execute(
+                f"""
+                SELECT
+                    s.student_id AS roll_number,
+                    s.name AS student_name,
+                    a.status AS status,
+                    a.date AS attendance_date,
+                    a.time AS attendance_time,
+                    t.*
+                FROM attendance AS a
+                INNER JOIN students AS s
+                    ON s.id = a.student_id
+                INNER JOIN timetable AS t
+                    ON t.id = a.timetable_id
+                WHERE a.date = ?
+                  AND a.timetable_id IN ({placeholders})
+                ORDER BY t.start_time, s.student_id
+                """,
+                (today_iso, *my_timetable_ids)
+            ).fetchall()
+
+            for row in rows:
+                record = dict(row)
+
+                record["subject"] = (
+                    record.get("subject_name")
+                    or record.get("subject")
+                    or record.get("course_code")
+                    or record.get("class_name")
+                    or "Class"
+                )
+
+                record["faculty"] = (
+                    record.get("faculty_name")
+                    or record.get("faculty")
+                    or faculty_name
+                    or username
+                    or "-"
+                )
+
+                record["date"] = (
+                    record.get("attendance_date") or today_iso
+                )
+
+                record["time"] = (
+                    record.get("attendance_time") or "--"
+                )
+
+                today_attendance_records.append(record)
+
+        return render_template(
+            "faculty_dashboard.html",
+            faculty=faculty,
+            faculty_name=faculty_name,
+            today_date=today_iso,
+            today_classes=today_classes,
+            next_class=next_class,
+            timetable_count=timetable_count,
+            today_present=today_present,
+            total_attendance=total_attendance,
+            today_attendance_records=today_attendance_records
+        )
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# FACULTY TIMETABLE — MONDAY TO SUNDAY
+# ============================================================
+
+@app.route("/faculty/timetable")
+@role_required("faculty")
+def faculty_timetable():
+
+    faculty, faculty_name, username = faculty_identity()
+
+    if faculty is None:
+        flash("Faculty account not found.", "error")
+        return redirect(url_for("logout"))
+
+    conn = get_db_connection()
+
+    try:
+        rows = all_timetable_rows(conn)
+
+        timetable_entries = [
+            dict(row)
+            for row in rows
+            if faculty_matches_timetable(
+                row, faculty_name, username
+            )
+        ]
+
+        for item in timetable_entries:
+            item["subject_name"] = (
+                item.get("subject_name")
+                or item.get("subject")
+                or item.get("course_code")
+                or "Class"
+            )
+            item["room_no"] = (
+                item.get("room_no")
+                or item.get("room")
+                or "-"
+            )
+
+        return render_template(
+            "faculty_timetable.html",
+            faculty=faculty,
+            timetable_entries=timetable_entries,
+            timetable=timetable_entries
+        )
+
+    finally:
+        conn.close()
+
+
+
+
+# ============================================================
+# FACULTY DATE-WISE ATTENDANCE
+# Display ALL classes scheduled for the selected date.
+# ============================================================
+
+@app.route("/faculty/attendance")
+@role_required("faculty")
+def faculty_attendance():
+    faculty, faculty_name, username = faculty_identity()
+
+    if faculty is None:
+        flash("Faculty account not found.", "error")
+        return redirect(url_for("logout"))
+
+    # Get and validate the selected date.
+    selected_date = request.args.get(
+        "date", date.today().isoformat()
+    ).strip()
+
+    try:
+        date.fromisoformat(selected_date)
+    except (ValueError, TypeError):
+        selected_date = date.today().isoformat()
+
+    # Get the selected timetable class ID, if any.
+    selected_timetable_id = request.args.get(
+        "timetable_id", ""
+    ).strip()
+
+    conn = get_db_connection()
+
+    try:
+        # Get ALL active classes scheduled for the selected date,
+        # regardless of which faculty member is assigned.
+        scheduled = scheduled_classes_for_date(
+            conn, selected_date
+        )
+
+        classes = [
+            dict(row)
+            for row in scheduled
+        ]
+
+        # Prepare consistent subject and room labels.
+        for item in classes:
+            item["subject_name"] = (
+                item.get("subject_name")
+                or item.get("subject")
+                or item.get("course_code")
+                or item.get("class_name")
+                or "Class"
+            )
+
+            item["room_no"] = (
+                item.get("room_no")
+                or item.get("room")
+                or item.get("classroom")
+                or "-"
+            )
+
+        # Find the selected class among all scheduled classes.
+        selected_class = None
+        attendance_records = []
+
+        if selected_timetable_id:
+            try:
+                class_id = int(selected_timetable_id)
+            except (ValueError, TypeError):
+                class_id = None
+
+            if class_id is not None:
+                selected_class = next(
+                    (
+                        item for item in classes
+                        if str(item.get("id")) == str(class_id)
+                    ),
+                    None
+                )
+
+            # Load attendance only when the class is scheduled
+            # for the selected date.
+            if selected_class:
+                attendance_records = _class_attendance_rows(
+                    conn,
+                    selected_class,
+                    selected_date
+                )
+
+        # Attendance status counts.
+        present_count = sum(
+            1 for row in attendance_records
+            if str(row.get("status", "")).strip().lower()
+            == "present"
+        )
+
+        late_count = sum(
+            1 for row in attendance_records
+            if str(row.get("status", "")).strip().lower()
+            == "late"
+        )
+
+        absent_count = sum(
+            1 for row in attendance_records
+            if str(row.get("status", "")).strip().lower()
+            == "absent"
+        )
+
+        total_students = len(attendance_records)
+        marked_count = 0
+
+        if selected_class:
+            marked_count = conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM attendance
+                WHERE timetable_id = ?
+                  AND date = ?
+                """,
+                (selected_class["id"], selected_date)
+            ).fetchone()[0]
+
+        unmarked_count = max(
+            0, total_students - marked_count
+        )
+
+        finalized = (
+            bool(total_students)
+            and marked_count >= total_students
+        )
+
+        return render_template(
+            "faculty_attendance.html",
+            faculty=faculty,
+            selected_date=selected_date,
+            classes=classes,
+            selected_timetable_id=selected_timetable_id,
+            selected_class=selected_class,
+            attendance_records=attendance_records,
+            present_count=present_count,
+            late_count=late_count,
+            absent_count=absent_count,
+            unmarked_count=unmarked_count,
+            total_students=total_students,
+            marked_count=marked_count,
+            finalized=finalized
+        )
+
+    finally:
+        conn.close()
+
+
+
+
+# ============================================================
+# FINALIZE FACULTY ATTENDANCE
+# ============================================================
+
+@app.route(
+    "/faculty/attendance/finalize",
+    methods=["POST"]
+)
+@role_required("faculty")
+def finalize_faculty_attendance():
+
+    faculty, faculty_name, username = faculty_identity()
+
+    if faculty is None:
+        flash("Faculty account not found.", "error")
+        return redirect(url_for("logout"))
+
+    selected_date = request.form.get(
+        "date",
+        date.today().isoformat()
+    ).strip()
+
+    timetable_id = request.form.get(
+        "timetable_id",
+        ""
+    ).strip()
+
+    # --------------------------------------------------------
+    # Validate submitted date and timetable ID
+    # --------------------------------------------------------
+
+    try:
+        date.fromisoformat(selected_date)
+        timetable_id = int(timetable_id)
+
+        if timetable_id <= 0:
+            raise ValueError("Invalid timetable ID")
+
+    except (ValueError, TypeError):
+        flash("Please select a valid date and class.", "error")
+        return redirect(url_for("faculty_attendance"))
+
+    conn = get_db_connection()
+
+    try:
+        # ----------------------------------------------------
+        # Load the selected active timetable class
+        # ----------------------------------------------------
+
+        timetable = conn.execute(
+            """
+            SELECT *
+            FROM timetable
+            WHERE id = ?
+              AND (active = 1 OR active IS NULL)
+            """,
+            (timetable_id,)
+        ).fetchone()
+
+        if timetable is None:
+            flash("Selected class was not found.", "error")
+            return redirect(
+                url_for(
+                    "faculty_attendance",
+                    date=selected_date
+                )
+            )
+
+        # ----------------------------------------------------
+        # Verify that the class is scheduled on this date
+        # ----------------------------------------------------
+
+        aliases = {
+            item.lower()
+            for item in get_day_aliases(selected_date)
+        }
+
+        class_day = str(
+            timetable["day"] or ""
+        ).strip().lower()
+
+        if class_day not in aliases:
+            flash(
+                "That class is not scheduled on the selected date.",
+                "error"
+            )
+            return redirect(
+                url_for(
+                    "faculty_attendance",
+                    date=selected_date
+                )
+            )
+
+        # ----------------------------------------------------
+        # Verify faculty ownership
+        # ----------------------------------------------------
+
+        if not faculty_matches_timetable(
+            timetable,
+            faculty_name,
+            username
+        ):
+            flash(
+                "You can finalize attendance only for your own class.",
+                "error"
+            )
+            return redirect(
+                url_for(
+                    "faculty_attendance",
+                    date=selected_date,
+                    timetable_id=timetable_id
+                )
+            )
+
+        # ----------------------------------------------------
+        # Only today's attendance can be finalized
+        # ----------------------------------------------------
+
+        if selected_date != date.today().isoformat():
+            flash(
+                "You can finalize attendance only for today's session.",
+                "error"
+            )
+            return redirect(
+                url_for(
+                    "faculty_attendance",
+                    date=selected_date,
+                    timetable_id=timetable_id
+                )
+            )
+
+        # ----------------------------------------------------
+        # Validate the existing scheduled camera window
+        # ----------------------------------------------------
+
+        window = get_camera_window_for_class(
+            timetable,
+            selected_date
+        )
+
+        if window is None:
+            flash(
+                "Unable to determine this class's attendance window.",
+                "error"
+            )
+            return redirect(
+                url_for(
+                    "faculty_attendance",
+                    date=selected_date,
+                    timetable_id=timetable_id
+                )
+            )
+
+        if datetime.now() < window["end"]:
+            flash(
+                f"Attendance can be finalized after "
+                f"{window['end_text']}.",
+                "error"
+            )
+            return redirect(
+                url_for(
+                    "faculty_attendance",
+                    date=selected_date,
+                    timetable_id=timetable_id
+                )
+            )
+
+        # ----------------------------------------------------
+        # Add Absent records for students without attendance
+        # ----------------------------------------------------
+
+        absent_added = 0
+        finalized_time = datetime.now().strftime("%H:%M:%S")
+
+        try:
+            conn.execute("BEGIN")
+
+            students = get_class_students(
+                conn,
+                timetable
+            )
+
+            for student in students:
+
+                exists = conn.execute(
+                    """
+                    SELECT id
+                    FROM attendance
+                    WHERE student_id = ?
+                      AND timetable_id = ?
+                      AND date = ?
+                    LIMIT 1
+                    """,
+                    (
+                        student["id"],
+                        timetable_id,
+                        selected_date
+                    )
+                ).fetchone()
+
+                if exists:
+                    continue
+
+                conn.execute(
+                    """
+                    INSERT INTO attendance
+                    (
+                        student_id,
+                        timetable_id,
+                        date,
+                        time,
+                        status,
+                        confidence
+                    )
+                    VALUES (?, ?, ?, ?, 'Absent', NULL)
+                    """,
+                    (
+                        student["id"],
+                        timetable_id,
+                        selected_date,
+                        finalized_time
+                    )
+                )
+
+                absent_added += 1
+
+            conn.commit()
+
+        except Exception:
+            conn.rollback()
+            app.logger.exception(
+                "Failed to finalize faculty attendance "
+                "for timetable ID %s on %s",
+                timetable_id,
+                selected_date
+            )
+
+            flash(
+                "Attendance could not be finalized. "
+                "No partial changes were saved.",
+                "error"
+            )
+
+            return redirect(
+                url_for(
+                    "faculty_attendance",
+                    date=selected_date,
+                    timetable_id=timetable_id
+                )
+            )
+
+        # ----------------------------------------------------
+        # Report success
+        # ----------------------------------------------------
+
+        flash(
+            f"Attendance finalized successfully. "
+            f"{absent_added} absent record(s) added.",
+            "success"
+        )
+
+        return redirect(
+            url_for(
+                "faculty_attendance",
+                date=selected_date,
+                timetable_id=timetable_id,
+                finalized="1"
+            )
+        )
+
+    finally:
+        conn.close()
+
+# ============================================================
+# PDF GENERATION
+# ============================================================
+
+def build_attendance_pdf(
+    rows,
+    title,
+    filename,
+    class_info=None
+):
+    buffer = BytesIO()
+
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        rightMargin=28,
+        leftMargin=28,
+        topMargin=28,
+        bottomMargin=28
+    )
+
+    styles = getSampleStyleSheet()
+    story = [
+        Paragraph(title, styles["Title"]),
+        Spacer(1, 12)
+    ]
+
+    if class_info:
+        subject = class_info.get("subject", "-")
+        faculty = class_info.get("faculty", "-")
+        selected_date = class_info.get("date", "-")
+        day = class_info.get("day", "-")
+        start_time = class_info.get("start_time", "-")
+        end_time = class_info.get("end_time", "-")
+        room = class_info.get("room_no", "-")
+
+        details = (
+            f"<b>Subject:</b> {subject} &nbsp;&nbsp; "
+            f"<b>Faculty:</b> {faculty}<br/>"
+            f"<b>Date:</b> {selected_date} &nbsp;&nbsp; "
+            f"<b>Day:</b> {day}<br/>"
+            f"<b>Time:</b> {start_time} - {end_time} &nbsp;&nbsp; "
+            f"<b>Room:</b> {room}"
+        )
+
+        story.append(
+            Paragraph(details, styles["Normal"])
+        )
+        story.append(Spacer(1, 12))
+
+    table_data = [[
+        "No.",
+        "Roll Number",
+        "Student Name",
+        "Subject",
+        "Faculty",
+        "Date",
+        "Time",
+        "Status"
+    ]]
+
+    for index, row in enumerate(rows, start=1):
+        table_data.append([
+            str(index),
+            str(
+                row.get("roll_number")
+                or row.get("student_code")
+                or row.get("student_id")
+                or "-"
+            ),
+            str(
+                row.get("student_name")
+                or row.get("name")
+                or "-"
+            ),
+            str(row.get("subject_name") or "-"),
+            str(row.get("faculty_name") or "-"),
+            str(row.get("date") or "-"),
+            str(row.get("time") or "-"),
+            str(row.get("status") or "Not marked")
+        ])
+
+    if len(table_data) == 1:
+        table_data.append([
+            "-", "-", "No attendance records",
+            "-", "-", "-", "-", "-"
+        ])
+
+    table = Table(
+        table_data,
+        repeatRows=1,
+        colWidths=[
+            32, 75, 145, 95,
+            100, 72, 65, 65
+        ]
+    )
+
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#222222")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("LEADING", (0, 0), (-1, -1), 10),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [
+            colors.white,
+            colors.HexColor("#f4f4f4")
+        ]),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6)
+    ]))
+
+    story.append(table)
+    document.build(story)
+
+    buffer.seek(0)
+    return buffer
+
+
+# ============================================================
+# BUILD PDF ROWS FROM DATABASE DATA
+# ============================================================
+
+def attendance_pdf_rows(conn, timetable_row, selected_date):
+
+    records = _class_attendance_rows(
+        conn,
+        timetable_row,
+        selected_date
+    )
+
+    rows = []
+
+    for record in records:
+        rows.append({
+            "roll_number": record["student_code"],
+            "student_name": record["student_name"],
+            "subject_name": record["subject_name"],
+            "faculty_name": record["faculty_name"],
+            "start_time": record["start_time"],
+            "end_time": record["end_time"],
+            "date": record["date"],
+            "time": record["time"],
+            "status": record["status"]
+        })
+
+    return rows
+
+
+# ============================================================
+# FACULTY DOWNLOAD — SELECTED CLASS AND DATE
+# ============================================================
+
+@app.route("/faculty/attendance/pdf")
+@role_required("faculty")
+def faculty_attendance_pdf():
+
+    faculty, faculty_name, username = faculty_identity()
+
+    if faculty is None:
+        flash("Faculty account not found.", "error")
+        return redirect(url_for("logout"))
+
+    selected_date = request.args.get(
+        "date",
+        date.today().isoformat()
+    ).strip()
+
+    timetable_id = request.args.get(
+        "timetable_id",
+        ""
+    ).strip()
+
+    try:
+        date.fromisoformat(selected_date)
+        timetable_id = int(timetable_id)
+    except (TypeError, ValueError):
+        flash("Select a valid date and class first.", "error")
+        return redirect(
+            url_for("faculty_attendance", date=selected_date)
+        )
+
+    conn = get_db_connection()
+
+    try:
+        timetable = conn.execute(
+            """
+            SELECT *
+            FROM timetable
+            WHERE id = ?
+              AND (active = 1 OR active IS NULL)
+            """,
+            (timetable_id,)
+        ).fetchone()
+
+        if timetable is None:
+            flash("Selected class was not found.", "error")
+            return redirect(
+                url_for("faculty_attendance", date=selected_date)
+            )
+
+        valid_days = {
+            item.lower()
+            for item in get_day_aliases(selected_date)
+        }
+
+        if str(timetable["day"] or "").strip().lower() not in valid_days:
+            flash("This class is not scheduled on that date.", "error")
+            return redirect(
+                url_for("faculty_attendance", date=selected_date)
+            )
+
+        # Faculty can download only their assigned classes.
+        if not faculty_matches_timetable(
+            timetable,
+            faculty_name,
+            username
+        ):
+            flash("You cannot download another faculty member's class.", "error")
+            return redirect(
+                url_for("faculty_attendance", date=selected_date)
+            )
+
+        rows = attendance_pdf_rows(
+            conn,
+            timetable,
+            selected_date
+        )
+
+        class_info = {
+            "subject": timetable_subject(timetable),
+            "faculty": (
+                timetable["faculty_name"]
+                if "faculty_name" in timetable.keys()
+                and timetable["faculty_name"]
+                else faculty_name
+            ),
+            "date": selected_date,
+            "day": timetable["day"],
+            "start_time": timetable["start_time"],
+            "end_time": timetable["end_time"],
+            "room_no": timetable_room(timetable)
+        }
+
+        pdf = build_attendance_pdf(
+            rows,
+            "Class Attendance Report",
+            "attendance.pdf",
+            class_info
+        )
+
+        return send_file(
+            pdf,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"attendance_{selected_date}_{timetable_id}.pdf"
+        )
+
+    finally:
+        conn.close()
+
+
+
+# ============================================================
+# FACULTY DOWNLOAD — TODAY'S CLASSES
+# ============================================================
+
+@app.route("/faculty/attendance/today/pdf")
+@role_required("faculty")
+def faculty_today_attendance_pdf():
+
+    faculty, faculty_name, username = faculty_identity()
+
+    if faculty is None:
+        flash("Faculty account not found.", "error")
+        return redirect(url_for("logout"))
+
+    today = date.today().isoformat()
+    conn = get_db_connection()
+
+    try:
+        today_classes = [
+            row for row in scheduled_classes_for_date(conn, today)
+            if faculty_matches_timetable(
+                row, faculty_name, username
+            )
+        ]
+
+        combined_rows = []
+
+        for timetable in today_classes:
+            combined_rows.extend(
+                attendance_pdf_rows(conn, timetable, today)
+            )
+
+        pdf = build_attendance_pdf(
+            combined_rows,
+            "Today's Attendance Report",
+            "today_attendance.pdf",
+            {
+                "subject": "All assigned classes",
+                "faculty": faculty_name,
+                "date": today,
+                "day": date.today().strftime("%A"),
+                "start_time": "-",
+                "end_time": "-",
+                "room_no": "-"
+            }
+        )
+
+        return send_file(
+            pdf,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"faculty_attendance_{today}.pdf"
+        )
+
+    finally:
+        conn.close()
+
+
+# Compatibility alias for templates using the old endpoint name
+app.add_url_rule(
+    "/faculty/attendance/today/download",
+    endpoint="faculty_today_attendance_download",
+    view_func=faculty_today_attendance_pdf,
+    methods=["GET"]
+)
+
+
+# ============================================================
+# ADMIN DOWNLOAD — CURRENT CAMERA CLASS
+# ============================================================
+
+@app.route("/admin/attendance/current/pdf")
+@role_required("admin")
+def admin_current_attendance_pdf():
+
+    current_class = get_current_timetable_class()
+
+    if current_class is None:
+        flash("There is no active camera attendance class.", "error")
+        return redirect(url_for("dashboard"))
+
+    selected_date = date.today().isoformat()
+
+    conn = get_db_connection()
+
+    try:
+        timetable = conn.execute(
+            """
+            SELECT *
+            FROM timetable
+            WHERE id = ?
+            """,
+            (current_class["id"],)
+        ).fetchone()
+
+        if timetable is None:
+            flash("Class not found.", "error")
+            return redirect(url_for("dashboard"))
+
+        rows = attendance_pdf_rows(
+            conn,
+            timetable,
+            selected_date
+        )
+
+        class_info = {
+            "subject": timetable_subject(timetable),
+            "faculty": (
+                timetable["faculty_name"]
+                if "faculty_name" in timetable.keys()
+                else timetable["faculty"]
+                if "faculty" in timetable.keys()
+                else "-"
+            ),
+            "date": selected_date,
+            "day": timetable["day"],
+            "start_time": timetable["start_time"],
+            "end_time": timetable["end_time"],
+            "room_no": timetable_room(timetable)
+        }
+
+        pdf = build_attendance_pdf(
+            rows,
+            "Current Class Attendance",
+            "current_attendance.pdf",
+            class_info
+        )
+
+        return send_file(
+            pdf,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"current_attendance_{selected_date}.pdf"
+        )
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# ADMIN DOWNLOAD — SELECTED DATE AND CLASS
+# ============================================================
+
+@app.route("/admin/attendance/pdf")
+@role_required("admin")
+def admin_attendance_pdf():
+
+    selected_date = request.args.get(
+        "date",
+        date.today().isoformat()
+    ).strip()
+
+    timetable_id = request.args.get(
+        "timetable_id",
+        ""
+    ).strip()
+
+    try:
+        date.fromisoformat(selected_date)
+        timetable_id = int(timetable_id)
+    except (TypeError, ValueError):
+        flash("Select a valid date and class.", "error")
+        return redirect(url_for("admin_attendance_history"))
+
+    conn = get_db_connection()
+
+    try:
+        timetable = conn.execute(
+            """
+            SELECT *
+            FROM timetable
+            WHERE id = ?
+              AND (active = 1 OR active IS NULL)
+            """,
+            (timetable_id,)
+        ).fetchone()
+
+        if timetable is None:
+            flash("Class not found.", "error")
+            return redirect(
+                url_for("admin_attendance_history", date=selected_date)
+            )
+
+        valid_days = {
+            item.lower()
+            for item in get_day_aliases(selected_date)
+        }
+
+        if str(timetable["day"] or "").strip().lower() not in valid_days:
+            flash("This class is not scheduled on that date.", "error")
+            return redirect(
+                url_for("admin_attendance_history", date=selected_date)
+            )
+
+        rows = attendance_pdf_rows(
+            conn,
+            timetable,
+            selected_date
+        )
+
+        class_info = {
+            "subject": timetable_subject(timetable),
+            "faculty": (
+                timetable["faculty_name"]
+                if "faculty_name" in timetable.keys()
+                and timetable["faculty_name"]
+                else (
+                    timetable["faculty"]
+                    if "faculty" in timetable.keys()
+                    else "-"
+                )
+            ),
+            "date": selected_date,
+            "day": timetable["day"],
+            "start_time": timetable["start_time"],
+            "end_time": timetable["end_time"],
+            "room_no": timetable_room(timetable)
+        }
+
+        pdf = build_attendance_pdf(
+            rows,
+            "Attendance Report",
+            "attendance.pdf",
+            class_info
+        )
+
+        return send_file(
+            pdf,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"attendance_{selected_date}_{timetable_id}.pdf"
+        )
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# CURRENT USER API
+# ============================================================
+
+@app.route("/api/me")
+@login_required
+def current_user():
+
+    return jsonify({
+        "id": session.get("user_id"),
+        "username": session.get("username"),
+        "role": session.get("role")
+    })
+
+
+# ============================================================
+# STUDENTS API
+# ============================================================
+
+@app.route("/api/students")
+@login_required
+def api_students():
+
+    conn = get_db_connection()
+
+    try:
+        students = conn.execute(
+            """
+            SELECT *
+            FROM students
+            ORDER BY student_id
+            """
+        ).fetchall()
+
+        return jsonify([
+            dict(student)
+            for student in students
+        ])
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# FACULTY API
+# ============================================================
+
+@app.route("/api/faculty")
+@role_required("admin")
+def api_faculty():
+
+    conn = get_db_connection()
+
+    try:
+        faculty_members = conn.execute(
+            """
+            SELECT *
+            FROM faculty
+            ORDER BY name
+            """
+        ).fetchall()
+
+        return jsonify([
+            dict(member)
+            for member in faculty_members
+        ])
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# TIMETABLE API
+# ============================================================
+
+@app.route("/api/timetable")
+@login_required
+def api_timetable():
+
+    conn = get_db_connection()
+
+    try:
+        rows = all_timetable_rows(conn)
+
+        return jsonify([
+            dict(row)
+            for row in rows
+        ])
+
+    finally:
+        conn.close()
+
+
+@app.route("/api/timetable/day/<day_name>")
+@login_required
+def api_timetable_by_day(day_name):
+
+    normalized = day_name.strip().lower()
+
+    aliases = None
+
+    for short_day, day_aliases in DAY_ALIASES.items():
+        if normalized in [
+            value.lower()
+            for value in day_aliases
+        ]:
+            aliases = [
+                value.lower()
+                for value in day_aliases
+            ]
+            break
+
+    if aliases is None:
+        return jsonify({
+            "success": False,
+            "message": "Invalid day name."
+        }), 400
+
+    placeholders = ",".join("?" for _ in aliases)
+
+    conn = get_db_connection()
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT *
+            FROM timetable
+            WHERE lower(trim(day)) IN ({placeholders})
+            ORDER BY start_time
+            """,
+            aliases
+        ).fetchall()
+
+        return jsonify({
+            "success": True,
+            "day": day_name,
+            "classes": [
+                dict(row)
+                for row in rows
+            ]
+        })
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# CURRENT CLASS ATTENDANCE API
+# ============================================================
+
+@app.route("/api/attendance")
+@login_required
+def api_attendance():
+
+    current_class = get_current_timetable_class()
+
+    if current_class is None:
+        return jsonify([])
+
+    conn = get_db_connection()
+
+    try:
+        return jsonify(
+            _class_attendance_rows(
+                conn,
+                current_class,
+                date.today().isoformat()
+            )
+        )
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# ADMIN ATTENDANCE HISTORY PAGE
+# ============================================================
+
+@app.route("/admin/attendance")
+@role_required("admin")
+def admin_attendance_history():
+
+    selected_date = request.args.get(
+        "date",
+        date.today().isoformat()
+    ).strip()
+
+    try:
+        date.fromisoformat(selected_date)
+    except (ValueError, TypeError):
+        selected_date = date.today().isoformat()
+
+    return render_template(
+        "admin_attendance.html",
+        selected_date=selected_date
+    )
+
+
+# ============================================================
+# ADMIN ATTENDANCE HISTORY API
+# ============================================================
+
+@app.route("/api/admin/attendance")
+@role_required("admin")
+def api_admin_attendance_history():
+
+    selected_date = request.args.get(
+        "date",
+        date.today().isoformat()
+    ).strip()
+
+    timetable_id = request.args.get(
+        "timetable_id",
+        ""
+    ).strip()
+
+    try:
+        date.fromisoformat(selected_date)
+    except (TypeError, ValueError):
+        return jsonify({
+            "success": False,
+            "message": "Invalid date."
+        }), 400
+
+    conn = get_db_connection()
+
+    try:
+        classes = scheduled_classes_for_date(
+            conn,
+            selected_date
+        )
+
+        if not timetable_id:
+            return jsonify({
+                "success": True,
+                "classes": [
+                    dict(row)
+                    for row in classes
+                ],
+                "records": []
+            })
+
+        try:
+            selected_id = int(timetable_id)
+        except ValueError:
+            return jsonify({
+                "success": False,
+                "message": "Invalid class selection."
+            }), 400
+
+        timetable = conn.execute(
+            """
+            SELECT *
+            FROM timetable
+            WHERE id = ?
+              AND (active = 1 OR active IS NULL)
+            """,
+            (selected_id,)
+        ).fetchone()
+
+        if timetable is None:
+            return jsonify({
+                "success": False,
+                "message": "Class not found."
+            }), 404
+
+        valid_days = {
+            item.lower()
+            for item in get_day_aliases(selected_date)
+        }
+
+        if str(timetable["day"] or "").strip().lower() not in valid_days:
+            return jsonify({
+                "success": False,
+                "message": "Class is not scheduled on that date."
+            }), 400
+
+        records = _class_attendance_rows(
+            conn,
+            timetable,
+            selected_date
+        )
+
+        return jsonify({
+            "success": True,
+            "classes": [],
+            "records": records,
+            "class_info": {
+                "subject": timetable_subject(timetable),
+                "faculty": (
+                    timetable["faculty_name"]
+                    if "faculty_name" in timetable.keys()
+                    and timetable["faculty_name"]
+                    else (
+                        timetable["faculty"]
+                        if "faculty" in timetable.keys()
+                        else "-"
+                    )
+                ),
+                "start_time": timetable["start_time"],
+                "end_time": timetable["end_time"],
+                "room_no": timetable_room(timetable),
+                "date": selected_date
+            }
+        })
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# TEST ROUTE
+# ============================================================
+
+@app.route("/test")
+def test():
+
+    return """
+    <h1>Intelligent Student Attendance System</h1>
+    <p>Flask server is running successfully.</p>
+    """
+
+
+# ============================================================
+# ERROR HANDLERS
+# ============================================================
+
+@app.errorhandler(404)
+def page_not_found(error):
+
+    return """
+    <h1>404 - Page Not Found</h1>
+    <p>The requested page does not exist.</p>
+    """, 404
+
+
+@app.errorhandler(500)
+def internal_server_error(error):
+
+    app.logger.exception(
+        "Internal server error: %s",
+        error
+    )
+
+    return """
+    <h1>500 - Internal Server Error</h1>
+    <p>Something went wrong on the server. Check the Flask terminal for details.</p>
+    """, 500
+
+
+# ============================================================
+# STUDENT TIMETABLE
+# ============================================================
+
+def get_student_or_redirect():
+    student = get_logged_in_student()
+    if student is None:
+        session.clear()
+        return None
+    return student
+
+
+def normalize_weekday(value):
+    value = str(value or "").strip().lower()
+    aliases = {
+        "mon": "monday",
+        "tue": "tuesday", "tues": "tuesday",
+        "wed": "wednesday",
+        "thu": "thursday", "thur": "thursday", "thurs": "thursday",
+        "fri": "friday",
+        "sat": "saturday",
+        "sun": "sunday",
+    }
+    return aliases.get(value, value)
+
+
+# ============================================================
+# STUDENT ATTENDANCE HISTORY
+# ============================================================
+
+@app.route("/student/history")
+@role_required("student")
+def student_attendance_history():
+    student = get_student_or_redirect()
+    if student is None:
+        return redirect(url_for("login"))
+
+    start_date = request.args.get("start_date", "").strip()
+    end_date = request.args.get("end_date", "").strip()
+
+    try:
+        if start_date:
+            date.fromisoformat(start_date)
+
+        if end_date:
+            date.fromisoformat(end_date)
+
+        if start_date and end_date and start_date > end_date:
+            start_date, end_date = end_date, start_date
+
+    except ValueError:
+        flash("Please select valid dates.", "error")
+        start_date, end_date = "", ""
+
+    sql = """
+        SELECT
+            a.date,
+            a.time,
+            a.status,
+            t.subject,
+            t.class_name,
+            t.start_time,
+            t.end_time,
+            t.room,
+            t.room_no
+        FROM attendance AS a
+        LEFT JOIN timetable AS t
+            ON t.id = a.timetable_id
+        WHERE a.student_id = ?
+    """
+
+    params = [student["id"]]
+
+    if start_date:
+        sql += " AND a.date >= ?"
+        params.append(start_date)
+
+    if end_date:
+        sql += " AND a.date <= ?"
+        params.append(end_date)
+
+    sql += " ORDER BY a.date DESC, t.start_time ASC"
+
+    conn = get_db_connection()
+
+    try:
+        records = [
+            dict(row)
+            for row in conn.execute(sql, params).fetchall()
+        ]
+
+        present_count = sum(
+            1 for row in records
+            if str(row.get("status") or "").lower()
+            in ("present", "late")
+        )
+
+        total_count = len(records)
+
+        percentage = (
+            round(present_count * 100 / total_count, 1)
+            if total_count else 0
+        )
+
+        return render_template(
+            "student_history.html",
+            student=student,
+            records=records,
+            start_date=start_date,
+            end_date=end_date,
+            present_count=present_count,
+            total_count=total_count,
+            percentage=percentage,
+            active_page="history"
+        )
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# STUDENT PROFILE AND PASSWORD CHANGE
+# ============================================================
+
+@app.route("/student/profile", methods=["GET", "POST"])
+@role_required("student")
+def student_profile():
+    student = get_student_or_redirect()
+    if student is None:
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+
+    try:
+        columns = {
+            row["name"]
+            for row in conn.execute(
+                "PRAGMA table_info(students)"
+            ).fetchall()
+        }
+
+        editable_fields = [
+            field for field in (
+                "name", "department", "year", "section", "email"
+            )
+            if field in columns
+        ]
+
+        password_column = next(
+            (
+                field for field in (
+                    "password_hash", "password", "password_digest"
+                )
+                if field in columns
+            ),
+            None
+        )
+
+        if request.method == "POST":
+            action = request.form.get("action", "profile")
+
+            if action == "profile":
+                values = {
+                    field: request.form.get(field, "").strip() or None
+                    for field in editable_fields
+                }
+
+                if "name" in values and not values["name"]:
+                    flash("Name cannot be empty.", "error")
+                    return redirect(url_for("student_profile"))
+
+                if values:
+                    assignments = ", ".join(
+                        f'"{field}" = ?' for field in values
+                    )
+
+                    conn.execute(
+                        f"UPDATE students SET {assignments} WHERE id = ?",
+                        [*values.values(), student["id"]]
+                    )
+                    conn.commit()
+                    flash("Profile updated successfully.", "success")
+
+                return redirect(url_for("student_profile"))
+
+            if action == "password":
+                current_password = request.form.get(
+                    "current_password", ""
+                )
+                new_password = request.form.get("new_password", "")
+                confirm_password = request.form.get(
+                    "confirm_password", ""
+                )
+
+                if not password_column:
+                    flash(
+                        "Password changes are not configured for your "
+                        "students table.",
+                        "error"
+                    )
+
+                elif len(new_password) < 8:
+                    flash(
+                        "Your new password must contain at least "
+                        "8 characters.",
+                        "error"
+                    )
+
+                elif new_password != confirm_password:
+                    flash("The new passwords do not match.", "error")
+
+                else:
+                    row = conn.execute(
+                        f'SELECT "{password_column}" FROM students WHERE id = ?',
+                        (student["id"],)
+                    ).fetchone()
+
+                    try:
+                        valid_password = bool(
+                            row
+                            and row[0]
+                            and check_password_hash(
+                                row[0], current_password
+                            )
+                        )
+                    except (ValueError, TypeError):
+                        valid_password = False
+
+                    if not valid_password:
+                        flash(
+                            "Current password is incorrect, or the "
+                            "existing login does not use Werkzeug hashes.",
+                            "error"
+                        )
+                    else:
+                        conn.execute(
+                            f'UPDATE students SET "{password_column}" = ? '
+                            "WHERE id = ?",
+                            (
+                                generate_password_hash(new_password),
+                                student["id"]
+                            )
+                        )
+                        conn.commit()
+                        flash("Password changed successfully.", "success")
+
+                return redirect(url_for("student_profile"))
+
+        row = conn.execute(
+            "SELECT * FROM students WHERE id = ?",
+            (student["id"],)
+        ).fetchone()
+
+        profile = dict(row) if row else dict(student)
+
+        return render_template(
+            "student_profile.html",
+            student=profile,
+            editable_fields=editable_fields,
+            password_enabled=bool(password_column),
+            active_page="profile"
+        )
+
+    finally:
+        conn.close()
+
+# ============================================================
+# START FLASK
+# ============================================================
+
+if __name__ == "__main__":
+
+    app.run(
+        host="127.0.0.1",
+        port=5001,
+        debug=True
+    )
