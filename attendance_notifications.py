@@ -9,6 +9,7 @@ import re
 import smtplib
 import sqlite3
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from email.message import EmailMessage
 
 logger = logging.getLogger(__name__)
@@ -385,7 +386,7 @@ def notify_completed_timetable_absentees(
 
 
 def get_today_completed_timetables(conn, get_day_aliases_function):
-    today = date.today()
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
     columns = get_table_columns(conn, "timetable")
     id_column = find_first_column(columns, ("id", "timetable_id"))
     day_column = find_first_column(columns, ("day", "weekday", "day_of_week"))
