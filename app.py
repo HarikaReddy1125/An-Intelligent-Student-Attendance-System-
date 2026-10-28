@@ -145,7 +145,7 @@ def get_db_connection():
     return conn
 
 @app.route("/admin/check-face-storage")
-@role_required("admin")
+
 def check_face_storage():
     conn = get_db_connection()
     try:
