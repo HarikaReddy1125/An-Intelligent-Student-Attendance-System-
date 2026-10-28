@@ -144,6 +144,31 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+@app.route("/admin/check-face-storage")
+@role_required("admin")
+def check_face_storage():
+    conn = get_db_connection()
+    try:
+        rows = conn.execute("""
+            SELECT student_id, name,
+                   face_encoding IS NOT NULL AS saved,
+                   LENGTH(face_encoding) AS bytes
+            FROM students
+            ORDER BY student_id
+        """).fetchall()
+
+        return jsonify([
+            {
+                "student_id": row["student_id"],
+                "name": row["name"],
+                "saved": bool(row["saved"]),
+                "bytes": row["bytes"]
+            }
+            for row in rows
+        ])
+    finally:
+        conn.close()
+
 
 def get_table_columns(table_name):
     conn = get_db_connection()
