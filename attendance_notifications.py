@@ -111,13 +111,19 @@ def get_class_end_time(timetable):
                              timetable.get("end") or "")
 
 
+
 def class_has_finished(class_date, timetable_row):
-    if class_date < date.today():
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
+    today = now.date()
+
+    if class_date < today:
         return True
-    if class_date > date.today():
+    if class_date > today:
         return False
+
     end_time = get_class_end_time(timetable_row)
-    return bool(end_time and datetime.now().time() >= end_time)
+    return bool(end_time and now.time() >= end_time)
+
 
 
 def normalize_class_name(value):
@@ -417,7 +423,8 @@ def get_today_absentees(conn, get_day_aliases_function):
     for timetable in get_today_completed_timetables(conn, get_day_aliases_function):
         timetable_id = timetable.get("_timetable_id")
         if timetable_id is not None:
-            _, absentees = get_absentees_for_timetable(conn, timetable_id, date.today())
+            today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+            _, absentees = get_absentees_for_timetable(conn, timetable_id, today)
             results.extend(absentees)
     return results
 
@@ -439,7 +446,8 @@ def notify_today_absentees(get_db_connection_function, get_day_aliases_function,
             if timetable_id is None:
                 continue
             class_result = notify_completed_timetable_absentees(
-                get_db_connection_function, timetable_id, date.today(),
+                get_db_connection_function, timetable_id,
+                datetime.now(ZoneInfo("Asia/Kolkata")).date(),
                 send_email=True, send_whatsapp=send_whatsapp)
             for key in ("total_absentees", "emails_sent", "emails_failed", "skipped"):
                 result[key] += class_result.get(key, 0)

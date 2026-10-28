@@ -11456,6 +11456,31 @@ def admin_notify_today_absentees():
             "admin_attendance_history"
         )
     )
+
+
+# ============================================================
+# ATTENDANCE EMAIL SCHEDULER
+# ============================================================
+
+scheduler = BackgroundScheduler(
+    timezone=ZoneInfo("Asia/Kolkata")
+)
+
+scheduler.add_job(
+    run_attendance_email_notifications,
+    trigger="interval",
+    seconds=30,
+    id="attendance_email_notifications",
+    replace_existing=True,
+    max_instances=1,
+    coalesce=True
+)
+
+scheduler.start()
+
+print("ATTENDANCE EMAIL SCHEDULER STARTED")
+
+
 # ============================================================
 # ADMIN ATTENDANCE HISTORY API
 # ============================================================
