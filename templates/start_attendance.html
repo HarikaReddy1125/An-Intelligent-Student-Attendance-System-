@@ -1509,6 +1509,17 @@ stopBtn.addEventListener('click', () => {
   // Do not call finalizePreviousClass() here.
 });
 
+
+window.addEventListener('pageshow', () => {
+  if (document.visibilityState === 'visible' && !monitoring) {
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    showStatus(
+      'Ready to resume. Click Enable Camera & Monitor Schedule and allow camera access.'
+    );
+  }
+});
+
 /* ============================================================
    PAGE CLOSE
    ============================================================ */

@@ -778,7 +778,7 @@ def get_camera_window_for_class(
 
 
 def get_current_timetable_class(now=None):
-    now = now or datetime.now()
+    now = now or datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
 
     aliases = get_day_aliases(now.date().isoformat())
     if not aliases:
